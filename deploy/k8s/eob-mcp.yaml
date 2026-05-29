@@ -1,0 +1,157 @@
+---
+# eob-mcp: ServiceAccount, RBAC, Deployment, Service.
+#
+# Namespace assumption: this manifest deploys into the tawon-operator
+# namespace, the same namespace as the EoB workload pods. The namespace
+# is expected to already exist (created by the EoB chart). If you need
+# to deploy elsewhere, search/replace the namespace and update the
+# EOB_TAWON_NAMESPACE env var to match.
+#
+# Image reference: quay.io/mantisnet/eob-mcp:dev resolves via the
+# in-cluster registry mirror configured on every node
+# (registries.conf.d -> 172.31.44.247:5000). To iterate locally, build
+# and push to that registry directly; the manifest does not change.
+#
+# RBAC: a single ClusterRole + ClusterRoleBinding grants get on the
+# four workload kinds we inspect plus list on Pods. The verbs are
+# narrow but cluster-scoped because we read from two namespaces
+# (operators and tawon-operator). Tighten to two RoleBindings if a
+# stricter scope is required.
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: eob-mcp
+  namespace: tawon-operator
+  labels:
+    app.kubernetes.io/name: eob-mcp
+    app.kubernetes.io/component: mcp-server
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: eob-mcp-reader
+  labels:
+    app.kubernetes.io/name: eob-mcp
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: eob-mcp-reader
+  labels:
+    app.kubernetes.io/name: eob-mcp
+subjects:
+  - kind: ServiceAccount
+    name: eob-mcp
+    namespace: tawon-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: eob-mcp-reader
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eob-mcp
+  namespace: tawon-operator
+  labels:
+    app.kubernetes.io/name: eob-mcp
+    app.kubernetes.io/component: mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: eob-mcp
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: eob-mcp
+        app.kubernetes.io/component: mcp-server
+    spec:
+      serviceAccountName: eob-mcp
+      automountServiceAccountToken: true
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: eob-mcp
+          image: quay.io/mantisnet/eob-mcp:dev
+          imagePullPolicy: IfNotPresent
+          args:
+            - "-listen=:8443"
+            - "-log-level=info"
+          ports:
+            - name: mcp
+              containerPort: 8443
+              protocol: TCP
+          env:
+            # Identity values surface in cluster_identity output. Set
+            # these to the values the fleet console should display.
+            - name: EOB_SITE_ID
+              value: "srikan-tf-test-0"        # EDIT ME (XC site name)
+            - name: EOB_TENANT
+              value: "platform-svc-nbryikfr"   # EDIT ME (XC tenant id)
+            - name: EOB_REGION
+              value: "us-east-2"               # EDIT ME (XC region)
+            # Namespace overrides; defaults match the EoB chart so these
+            # are only needed if a deployment renames the namespaces.
+            # - name: EOB_OPERATOR_NAMESPACE
+            #   value: "operators"
+            # - name: EOB_TAWON_NAMESPACE
+            #   value: "tawon-operator"
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: mcp
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: mcp
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eob-mcp
+  namespace: tawon-operator
+  labels:
+    app.kubernetes.io/name: eob-mcp
+    app.kubernetes.io/component: mcp-server
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: eob-mcp
+  ports:
+    - name: mcp
+      port: 8443
+      targetPort: mcp
+      protocol: TCP
