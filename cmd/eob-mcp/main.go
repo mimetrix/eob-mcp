@@ -13,6 +13,10 @@ import (
 	"runtime/debug"
 	"syscall"
 	"time"
+
+	"github.com/mimetrix/eob-mcp/internal/config"
+	"github.com/mimetrix/eob-mcp/internal/mcp"
+	"github.com/mimetrix/eob-mcp/internal/tools"
 )
 
 // Version info is overridden at build time via -ldflags.
@@ -54,10 +58,17 @@ func main() {
 }
 
 func run(listen string, logger *slog.Logger) error {
+	cfg := config.FromEnv(version)
+	mcpServer, err := buildMCPServer(cfg)
+	if err != nil {
+		return err
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", healthzHandler)
 	mux.HandleFunc("/readyz", readyzHandler)
 	mux.HandleFunc("/version", versionHandler)
+	mux.Handle("/mcp", mcpServer)
 
 	srv := &http.Server{
 		Addr:              listen,
@@ -70,8 +81,8 @@ func run(listen string, logger *slog.Logger) error {
 
 	serverErrs := make(chan error, 1)
 	go func() {
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			serverErrs <- err
+		if lerr := srv.ListenAndServe(); lerr != nil && !errors.Is(lerr, http.ErrServerClosed) {
+			serverErrs <- lerr
 		}
 		close(serverErrs)
 	}()
@@ -80,18 +91,26 @@ func run(listen string, logger *slog.Logger) error {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	select {
-	case err := <-serverErrs:
-		return err
+	case lerr := <-serverErrs:
+		return lerr
 	case sig := <-sigs:
 		logger.Info("shutdown signal received", "signal", sig.String())
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownGracePeriod)
 	defer cancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		return err
+	return srv.Shutdown(shutdownCtx)
+}
+
+func buildMCPServer(cfg *config.Config) (*mcp.Server, error) {
+	s := mcp.NewServer("eob-mcp", version)
+	if err := s.RegisterTool(tools.NewClusterIdentity(cfg)); err != nil {
+		return nil, err
 	}
-	return nil
+	if err := s.RegisterTool(tools.NewEoBHealth()); err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // withRequestLimits applies safety caps to every request before it reaches handlers.
