@@ -254,6 +254,15 @@ eob-mcp/
 
 Apache-2.0.
 
+## Multi-cluster fleet topology
+
+`eob-mcp` is the per-cluster building block. For deployments where many
+EoB clusters share a single operations team and want one UI across all of
+them — with payload bytes staying inside each cluster — see
+[`FLEET.md`](FLEET.md). That document describes the console + inference +
+web-UI stack that consumes `eob-mcp` over MCP, the data-sovereignty
+story, and the two recommended deployment topologies.
+
 ## Related
 
 - [`mimetrix/XC-eBPF`](https://github.com/mimetrix/XC-eBPF) — EoB install
