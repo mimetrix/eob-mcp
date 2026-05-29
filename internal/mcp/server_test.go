@@ -203,7 +203,7 @@ func TestHTTPHandlerSuccess(t *testing.T) {
 	s := newTestServer(t)
 	body := `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/mcp", strings.NewReader(body))
 	s.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status: got %d, want %d", rr.Code, http.StatusOK)
@@ -218,7 +218,7 @@ func TestHTTPHandlerNotificationAccepted(t *testing.T) {
 	s := newTestServer(t)
 	body := `{"jsonrpc":"2.0","method":"notifications/initialized"}`
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/mcp", strings.NewReader(body))
 	s.ServeHTTP(rr, req)
 	if rr.Code != http.StatusAccepted {
 		t.Fatalf("status: got %d, want %d", rr.Code, http.StatusAccepted)
@@ -229,7 +229,7 @@ func TestHTTPHandlerMethodNotAllowed(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t)
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/mcp", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/mcp", nil)
 	s.ServeHTTP(rr, req)
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("status: got %d, want %d", rr.Code, http.StatusMethodNotAllowed)
@@ -240,7 +240,7 @@ func TestHTTPHandlerParseError(t *testing.T) {
 	t.Parallel()
 	s := newTestServer(t)
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader("not json"))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/mcp", strings.NewReader("not json"))
 	s.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status: got %d, want %d (JSON-RPC errors are 200 OK)", rr.Code, http.StatusOK)
@@ -259,7 +259,7 @@ func TestHTTPHandlerInvalidJSONRPCVersion(t *testing.T) {
 	s := newTestServer(t)
 	body := `{"jsonrpc":"1.0","id":1,"method":"tools/list"}`
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/mcp", strings.NewReader(body))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/mcp", strings.NewReader(body))
 	s.ServeHTTP(rr, req)
 	var resp Response
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
@@ -275,7 +275,7 @@ func TestHTTPHandlerOversizedBody(t *testing.T) {
 	s := newTestServer(t)
 	oversized := bytes.Repeat([]byte("x"), MaxRequestBytes+1024)
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/mcp", bytes.NewReader(oversized))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/mcp", bytes.NewReader(oversized))
 	s.ServeHTTP(rr, req)
 	// Either a parse error (JSON-RPC 200 OK with error body) or a 413/400
 	// from MaxBytesReader is acceptable; both indicate the cap was enforced.

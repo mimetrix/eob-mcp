@@ -12,7 +12,7 @@ import (
 func TestHealthzHandler(t *testing.T) {
 	t.Parallel()
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/healthz", nil)
 	healthzHandler(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status: got %d, want %d", rr.Code, http.StatusOK)
@@ -25,7 +25,7 @@ func TestHealthzHandler(t *testing.T) {
 func TestReadyzHandler(t *testing.T) {
 	t.Parallel()
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/readyz", nil)
 	readyzHandler(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status: got %d, want %d", rr.Code, http.StatusOK)
@@ -35,7 +35,7 @@ func TestReadyzHandler(t *testing.T) {
 func TestVersionHandler(t *testing.T) {
 	t.Parallel()
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/version", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/version", nil)
 	versionHandler(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status: got %d, want %d", rr.Code, http.StatusOK)
@@ -59,7 +59,7 @@ func TestWithRequestLimitsPanicRecovery(t *testing.T) {
 		panic("deliberate test panic")
 	})
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/boom", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/boom", nil)
 	withRequestLimits(panicking).ServeHTTP(rr, req)
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("status: got %d, want %d", rr.Code, http.StatusInternalServerError)
@@ -73,7 +73,7 @@ func TestWithRequestLimitsBodyCap(t *testing.T) {
 	})
 	oversized := strings.Repeat("x", maxRequestBodyBytes+1024)
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/sink", strings.NewReader(oversized))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/sink", strings.NewReader(oversized))
 	withRequestLimits(sink).ServeHTTP(rr, req)
 	// The handler will get an EOF after maxRequestBodyBytes; the wrapper itself
 	// doesn't return an error code here — that's the caller's responsibility.

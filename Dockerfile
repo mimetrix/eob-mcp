@@ -8,7 +8,7 @@
 #   - CA certificates included
 # Resulting image is ~15-20 MB.
 
-ARG GO_VERSION=1.24
+ARG GO_VERSION=1.25
 ARG DISTROLESS_TAG=nonroot
 
 # ---- Stage 1: build ---------------------------------------------------------

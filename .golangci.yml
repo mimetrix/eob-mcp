@@ -7,7 +7,7 @@ version: "2"
 
 run:
   timeout: 5m
-  go: "1.24"
+  go: "1.25"
 
 linters:
   default: none
@@ -70,3 +70,4 @@ linters:
           - bodyclose
           - errcheck
           - gosec
+          - noctx
