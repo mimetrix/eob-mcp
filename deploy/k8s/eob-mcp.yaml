@@ -77,6 +77,13 @@ spec:
     spec:
       serviceAccountName: eob-mcp
       automountServiceAccountToken: true
+      # hostNetwork is required on F5 XC sites: the Vega CNI fails to
+      # register a Virtual Network for user-created namespaces ("Error
+      # in getting VN for namespace"), so non-EoB pods cannot get a pod
+      # IP. Sharing the node netns sidesteps that. dnsPolicy is bumped
+      # so the pod still resolves cluster DNS for the kubernetes API.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
@@ -88,11 +95,16 @@ spec:
           image: quay.io/mantisnet/eob-mcp:dev
           imagePullPolicy: IfNotPresent
           args:
-            - "-listen=:8443"
+            # 18443 is used (not 8443) because hostNetwork=true means
+            # the container binds directly on the node interface and
+            # 8443 is already taken by other host processes on every
+            # node. The Service in-front of this Pod still publishes
+            # 8443 to consumers.
+            - "-listen=:18443"
             - "-log-level=info"
           ports:
             - name: mcp
-              containerPort: 8443
+              containerPort: 18443
               protocol: TCP
           env:
             # Identity values surface in cluster_identity output. Set
@@ -153,5 +165,5 @@ spec:
   ports:
     - name: mcp
       port: 8443
-      targetPort: mcp
+      targetPort: mcp        # resolves to containerPort 18443 by name
       protocol: TCP
