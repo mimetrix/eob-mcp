@@ -176,9 +176,16 @@ Read-only browsable via MCP `resources/list`:
 
 ## Deployment
 
-Container image, deployed into the same Kubernetes cluster as EoB itself.
-Designed as a small Deployment alongside the Tawon operator — not a
-DaemonSet, not hostNetwork.
+Container image, deployed into the **same Kubernetes cluster and the same
+`tawon-operator` namespace** as the EoB workload pods (dashboard,
+streamstore, agent DS). The Tawon operator itself runs in the adjacent
+`operators` namespace; `eob-mcp`'s RBAC reaches into both. Designed as a
+small Deployment — not a DaemonSet, not hostNetwork.
+
+Why the same namespace: in-cluster NATS access to the streamstore
+Service is a `*.tawon-operator.svc:4222` lookup that resolves trivially
+when the client lives next door, simplifying network policy, and
+inheriting the same site-infrastructure trust boundary.
 
 | Property | Value |
 |---|---|
