@@ -14,7 +14,10 @@ import (
 	"syscall"
 	"time"
 
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/mimetrix/eob-mcp/internal/config"
+	"github.com/mimetrix/eob-mcp/internal/k8s"
 	"github.com/mimetrix/eob-mcp/internal/mcp"
 	"github.com/mimetrix/eob-mcp/internal/tools"
 )
@@ -59,7 +62,23 @@ func main() {
 
 func run(listen string, logger *slog.Logger) error {
 	cfg := config.FromEnv(version)
-	mcpServer, err := buildMCPServer(cfg)
+
+	// k8s wiring is best-effort at startup: a missing cluster (local dev,
+	// container without a ServiceAccount) should not prevent the MCP
+	// server from starting. Tools degrade to empty/stub output instead.
+	kubeClient, err := k8s.New()
+	if err != nil {
+		logger.Warn("kubernetes client unavailable; cluster-aware tools will return empty results",
+			"err", err)
+		kubeClient = nil
+	} else {
+		logger.Info("kubernetes client initialized",
+			"operator_ns", cfg.OperatorNamespace,
+			"tawon_ns", cfg.TawonNamespace,
+		)
+	}
+
+	mcpServer, err := buildMCPServer(cfg, kubeClient)
 	if err != nil {
 		return err
 	}
@@ -102,12 +121,16 @@ func run(listen string, logger *slog.Logger) error {
 	return srv.Shutdown(shutdownCtx)
 }
 
-func buildMCPServer(cfg *config.Config) (*mcp.Server, error) {
+func buildMCPServer(cfg *config.Config, kube *k8s.Client) (*mcp.Server, error) {
 	s := mcp.NewServer("eob-mcp", version)
-	if err := s.RegisterTool(tools.NewClusterIdentity(cfg)); err != nil {
+	var kc kubernetes.Interface
+	if kube != nil {
+		kc = kube.Clientset
+	}
+	if err := s.RegisterTool(tools.NewClusterIdentity(cfg, kc)); err != nil {
 		return nil, err
 	}
-	if err := s.RegisterTool(tools.NewEoBHealth()); err != nil {
+	if err := s.RegisterTool(tools.NewEoBHealth(cfg, kc)); err != nil {
 		return nil, err
 	}
 	return s, nil
