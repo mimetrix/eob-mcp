@@ -14,13 +14,21 @@ import (
 	"github.com/mimetrix/eob-mcp/internal/mcp"
 )
 
-// tawonOperatorDeployment is the Deployment name the operator ships
-// under. Used to derive eob_version from its container image tag.
-const tawonOperatorDeployment = "tawon-operator"
-
 // k8sCallTimeout bounds every API call this tool makes so that a slow or
 // unreachable apiserver cannot stall MCP request processing.
 const k8sCallTimeout = 5 * time.Second
+
+// operatorVersionLabel is the standard Helm/Kubebuilder label carrying
+// the chart's appVersion (e.g. "v2.39.36-rc1"). When present on the
+// operator Deployment, it is preferred over the container image tag
+// because it tracks the released version rather than whatever tag the
+// in-cluster registry happens to ship under.
+const operatorVersionLabel = "app.kubernetes.io/version"
+
+// operatorManagerContainer is the conventional name of the controller
+// container in a kubebuilder-generated operator. eob_version falls back
+// to this container's image tag when no version label is set.
+const operatorManagerContainer = "manager"
 
 // ClusterIdentity returns the cluster identity block used by fleet
 // consumers to label results coming back from this server.
@@ -88,9 +96,12 @@ func (t *ClusterIdentity) k8sVersion(_ context.Context) string {
 	return info.GitVersion
 }
 
-// eobVersion derives the EoB platform version from the tawon-operator
-// Deployment's container image tag. Returns "" if no kube client is
-// wired, the deployment is absent, or no tag is parseable.
+// eobVersion derives the EoB platform version from the operator
+// Deployment. It prefers the Helm-stamped app.kubernetes.io/version
+// label (most stable across re-tagged images) and falls back to the
+// "manager" container's image tag, then the first container's image
+// tag. Returns "" if no kube client is wired or the deployment is
+// absent.
 func (t *ClusterIdentity) eobVersion(ctx context.Context) string {
 	if t.kube == nil {
 		return ""
@@ -99,11 +110,22 @@ func (t *ClusterIdentity) eobVersion(ctx context.Context) string {
 	defer cancel()
 	dep, err := t.kube.AppsV1().
 		Deployments(t.cfg.OperatorNamespace).
-		Get(callCtx, tawonOperatorDeployment, metav1.GetOptions{})
+		Get(callCtx, t.cfg.OperatorDeploymentName, metav1.GetOptions{})
 	if err != nil {
 		return ""
 	}
+	if v := dep.Labels[operatorVersionLabel]; v != "" {
+		return v
+	}
 	containers := dep.Spec.Template.Spec.Containers
+	for i := range containers {
+		if containers[i].Name == operatorManagerContainer {
+			if tag := imageTag(containers[i].Image); tag != "" {
+				return tag
+			}
+			break
+		}
+	}
 	if len(containers) == 0 {
 		return ""
 	}

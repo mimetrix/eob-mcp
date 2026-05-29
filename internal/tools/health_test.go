@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	admissionv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,16 +39,20 @@ func TestEoBHealth_AllComponentsAbsentWhenEmptyCluster(t *testing.T) {
 			t.Errorf("%s: status=%v, want absent", key, comp["status"])
 		}
 	}
+	directives := got["directives"].([]any)
+	if len(directives) != 0 {
+		t.Errorf("directives: got %d entries, want 0", len(directives))
+	}
 }
 
-func TestEoBHealth_HealthyDeploymentsReportOK(t *testing.T) {
+func TestEoBHealth_HealthyStackReportsOK(t *testing.T) {
 	t.Parallel()
 	cfg := newTestConfig()
 	one := int32(1)
 	two := int32(2)
 	cs := fake.NewSimpleClientset(
 		&appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{Name: "tawon-operator", Namespace: cfg.OperatorNamespace},
+			ObjectMeta: metav1.ObjectMeta{Name: cfg.OperatorDeploymentName, Namespace: cfg.OperatorNamespace},
 			Spec:       appsv1.DeploymentSpec{Replicas: &one},
 			Status:     appsv1.DeploymentStatus{ReadyReplicas: 1},
 		},
@@ -61,15 +66,12 @@ func TestEoBHealth_HealthyDeploymentsReportOK(t *testing.T) {
 			Spec:       appsv1.StatefulSetSpec{Replicas: &two},
 			Status:     appsv1.StatefulSetStatus{ReadyReplicas: 2},
 		},
-		&appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{Name: "tawon-webhook", Namespace: cfg.TawonNamespace},
-			Spec:       appsv1.DeploymentSpec{Replicas: &one},
-			Status:     appsv1.DeploymentStatus{ReadyReplicas: 1},
+		&admissionv1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{Name: cfg.WebhookConfigName},
+			Webhooks:   []admissionv1.MutatingWebhook{{Name: "eob-mutate.f5.local"}},
 		},
-		&appsv1.DaemonSet{
-			ObjectMeta: metav1.ObjectMeta{Name: "tawon-agent", Namespace: cfg.TawonNamespace},
-			Status:     appsv1.DaemonSetStatus{DesiredNumberScheduled: 3, NumberReady: 3},
-		},
+		newDirectiveDS(cfg.TawonNamespace, "tawon-directive-foo", 3, 3),
+		newDirectiveDS(cfg.TawonNamespace, "tawon-directive-bar", 3, 3),
 	)
 	tool := NewEoBHealth(cfg, cs)
 	res, err := tool.Call(t.Context(), nil)
@@ -83,16 +85,26 @@ func TestEoBHealth_HealthyDeploymentsReportOK(t *testing.T) {
 			t.Errorf("%s: status=%v, want ok", key, comp["status"])
 		}
 	}
+	agent := got["agent"].(map[string]any)
+	if agent["ready"].(float64) != 6 || agent["desired"].(float64) != 6 {
+		t.Errorf("agent aggregate: got ready=%v desired=%v, want 6/6", agent["ready"], agent["desired"])
+	}
+	directives := got["directives"].([]any)
+	if len(directives) != 2 {
+		t.Fatalf("directives: got %d, want 2", len(directives))
+	}
+	// Sorted by name: bar before foo.
+	if directives[0].(map[string]any)["name"] != "tawon-directive-bar" {
+		t.Errorf("directives[0].name: got %v, want tawon-directive-bar (sorted)", directives[0].(map[string]any)["name"])
+	}
 }
 
-func TestEoBHealth_DegradedDaemonSet(t *testing.T) {
+func TestEoBHealth_DegradedDirectiveDaemonSet(t *testing.T) {
 	t.Parallel()
 	cfg := newTestConfig()
-	ds := &appsv1.DaemonSet{
-		ObjectMeta: metav1.ObjectMeta{Name: "tawon-agent", Namespace: cfg.TawonNamespace},
-		Status:     appsv1.DaemonSetStatus{DesiredNumberScheduled: 3, NumberReady: 2},
-	}
-	cs := fake.NewSimpleClientset(ds)
+	cs := fake.NewSimpleClientset(
+		newDirectiveDS(cfg.TawonNamespace, "tawon-directive-foo", 3, 2),
+	)
 	tool := NewEoBHealth(cfg, cs)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
@@ -103,12 +115,33 @@ func TestEoBHealth_DegradedDaemonSet(t *testing.T) {
 	if agent["status"] != "degraded" {
 		t.Errorf("agent status: got %v, want degraded", agent["status"])
 	}
+	if agent["ready"].(float64) != 2 || agent["desired"].(float64) != 3 {
+		t.Errorf("agent aggregate: got ready=%v desired=%v, want 2/3", agent["ready"], agent["desired"])
+	}
 }
 
-func TestEoBHealth_AgentPodsByNode(t *testing.T) {
+func TestEoBHealth_WebhookAbsentWhenMWCMissing(t *testing.T) {
+	t.Parallel()
+	cs := fake.NewSimpleClientset() // no MWC
+	tool := NewEoBHealth(newTestConfig(), cs)
+	res, err := tool.Call(t.Context(), nil)
+	if err != nil {
+		t.Fatalf("call: %v", err)
+	}
+	got := parseHealth(t, res.Content[0].Text)
+	webhook := got["webhook"].(map[string]any)
+	if webhook["status"] != "absent" {
+		t.Errorf("webhook status: got %v, want absent", webhook["status"])
+	}
+	if webhook["kind"] != "MutatingWebhookConfiguration" {
+		t.Errorf("webhook kind: got %v, want MutatingWebhookConfiguration", webhook["kind"])
+	}
+}
+
+func TestEoBHealth_AgentPodsByNodeAggregatesPerNode(t *testing.T) {
 	t.Parallel()
 	cfg := newTestConfig()
-	ready := func(name, node string, isReady bool) *corev1.Pod {
+	mkPod := func(name, node string, isReady bool) *corev1.Pod {
 		cond := corev1.ConditionFalse
 		if isReady {
 			cond = corev1.ConditionTrue
@@ -117,7 +150,7 @@ func TestEoBHealth_AgentPodsByNode(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: cfg.TawonNamespace,
-				Labels:    map[string]string{"app": "tawon-agent"},
+				Labels:    map[string]string{"app.kubernetes.io/name": "tawon-directive"},
 			},
 			Spec: corev1.PodSpec{NodeName: node},
 			Status: corev1.PodStatus{
@@ -126,9 +159,10 @@ func TestEoBHealth_AgentPodsByNode(t *testing.T) {
 		}
 	}
 	cs := fake.NewSimpleClientset(
-		ready("agent-0", "master-0", true),
-		ready("agent-1", "master-1", true),
-		ready("agent-2", "master-2", false),
+		mkPod("foo-a", "master-0", true),
+		mkPod("bar-a", "master-0", true),
+		mkPod("foo-b", "master-1", true),
+		mkPod("bar-b", "master-1", false),
 	)
 	tool := NewEoBHealth(cfg, cs)
 	res, err := tool.Call(t.Context(), nil)
@@ -136,15 +170,31 @@ func TestEoBHealth_AgentPodsByNode(t *testing.T) {
 		t.Fatalf("call: %v", err)
 	}
 	got := parseHealth(t, res.Content[0].Text)
-	byNode, ok := got["agents_per_node"].(map[string]any)
-	if !ok {
-		t.Fatalf("agents_per_node: type=%T, want map", got["agents_per_node"])
+	byNode := got["agents_per_node"].(map[string]any)
+	m0 := byNode["master-0"].(map[string]any)
+	if m0["ready"].(float64) != 2 || m0["total"].(float64) != 2 {
+		t.Errorf("master-0: got ready=%v total=%v, want 2/2", m0["ready"], m0["total"])
 	}
-	if byNode["master-0"] != "Ready" {
-		t.Errorf("master-0: got %v, want Ready", byNode["master-0"])
+	m1 := byNode["master-1"].(map[string]any)
+	if m1["ready"].(float64) != 1 || m1["total"].(float64) != 2 {
+		t.Errorf("master-1: got ready=%v total=%v, want 1/2", m1["ready"], m1["total"])
 	}
-	if byNode["master-2"] != "NotReady" {
-		t.Errorf("master-2: got %v, want NotReady", byNode["master-2"])
+}
+
+// newDirectiveDS returns a fake DaemonSet labeled to match the default
+// DirectiveLabelSelector and configured with the given ready/desired
+// counts on its Status block.
+func newDirectiveDS(ns, name string, desired, ready int32) *appsv1.DaemonSet {
+	return &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+			Labels:    map[string]string{"app.kubernetes.io/name": "tawon-directive"},
+		},
+		Status: appsv1.DaemonSetStatus{
+			DesiredNumberScheduled: desired,
+			NumberReady:            ready,
+		},
 	}
 }
 

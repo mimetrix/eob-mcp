@@ -16,12 +16,15 @@ import (
 
 func newTestConfig() *config.Config {
 	return &config.Config{
-		SiteID:            "site-x",
-		Tenant:            "tenant-y",
-		Region:            "us-east-2",
-		MCPVersion:        "test",
-		OperatorNamespace: "operators",
-		TawonNamespace:    "tawon-operator",
+		SiteID:                 "site-x",
+		Tenant:                 "tenant-y",
+		Region:                 "us-east-2",
+		MCPVersion:             "test",
+		OperatorNamespace:      "operators",
+		TawonNamespace:         "tawon-operator",
+		OperatorDeploymentName: "tawon-operator-controller-manager",
+		WebhookConfigName:      "eob-mutate",
+		DirectiveLabelSelector: "app.kubernetes.io/name=tawon-directive",
 	}
 }
 
@@ -75,12 +78,12 @@ func TestClusterIdentity_ReportsEoBVersionFromOperatorDeployment(t *testing.T) {
 	t.Parallel()
 	cfg := newTestConfig()
 	dep := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{Name: "tawon-operator", Namespace: cfg.OperatorNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: cfg.OperatorDeploymentName, Namespace: cfg.OperatorNamespace},
 		Spec: appsv1.DeploymentSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						{Name: "operator", Image: "quay.io/mantisnet/tawon-operator:rc6"},
+						{Name: "manager", Image: "quay.io/mantisnet/tawon-operator:rc6"},
 					},
 				},
 			},
@@ -95,6 +98,71 @@ func TestClusterIdentity_ReportsEoBVersionFromOperatorDeployment(t *testing.T) {
 	got := parseIdentity(t, res.Content[0].Text)
 	if got["eob_version"] != "rc6" {
 		t.Errorf("eob_version: got %q, want %q", got["eob_version"], "rc6")
+	}
+}
+
+// When both the app.kubernetes.io/version label and a parseable image
+// tag are present, the label wins because it carries the Helm chart's
+// appVersion — stable across image re-tags.
+func TestClusterIdentity_PrefersVersionLabelOverImageTag(t *testing.T) {
+	t.Parallel()
+	cfg := newTestConfig()
+	dep := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cfg.OperatorDeploymentName,
+			Namespace: cfg.OperatorNamespace,
+			Labels:    map[string]string{"app.kubernetes.io/version": "v2.39.36-rc1"},
+		},
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "manager", Image: "quay.io/mantisnet/tawon-operator:dev"},
+					},
+				},
+			},
+		},
+	}
+	cs := fake.NewSimpleClientset(dep)
+	tool := NewClusterIdentity(cfg, cs)
+	res, err := tool.Call(t.Context(), nil)
+	if err != nil {
+		t.Fatalf("call: %v", err)
+	}
+	got := parseIdentity(t, res.Content[0].Text)
+	if got["eob_version"] != "v2.39.36-rc1" {
+		t.Errorf("eob_version: got %q, want %q", got["eob_version"], "v2.39.36-rc1")
+	}
+}
+
+// With multiple containers, eob_version should prefer the conventionally
+// named "manager" container over the first one (which on a kubebuilder
+// operator is often kube-rbac-proxy).
+func TestClusterIdentity_PrefersManagerContainerImage(t *testing.T) {
+	t.Parallel()
+	cfg := newTestConfig()
+	dep := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: cfg.OperatorDeploymentName, Namespace: cfg.OperatorNamespace},
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{Name: "kube-rbac-proxy", Image: "gcr.io/kubebuilder/kube-rbac-proxy:v0.16.0"},
+						{Name: "manager", Image: "quay.io/mantisnet/tawon-operator:rc7"},
+					},
+				},
+			},
+		},
+	}
+	cs := fake.NewSimpleClientset(dep)
+	tool := NewClusterIdentity(cfg, cs)
+	res, err := tool.Call(t.Context(), nil)
+	if err != nil {
+		t.Fatalf("call: %v", err)
+	}
+	got := parseIdentity(t, res.Content[0].Text)
+	if got["eob_version"] != "rc7" {
+		t.Errorf("eob_version: got %q, want %q (manager-container tag)", got["eob_version"], "rc7")
 	}
 }
 

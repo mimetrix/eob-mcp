@@ -3,7 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -14,13 +14,11 @@ import (
 	"github.com/mimetrix/eob-mcp/internal/mcp"
 )
 
-// Tawon component layout. These names match the chart's resource names;
-// override via Helm values if a deployment renames them.
+// Tawon component layout. Most of these are the chart's resource names;
+// override via env if a downstream chart renames them.
 const (
-	tawonDashboardDeployment   = "tawon-dashboard"
+	tawonDashboardDeployment    = "tawon-dashboard"
 	tawonStreamstoreStatefulSet = "tawon-streamstore"
-	tawonWebhookDeployment     = "tawon-webhook"
-	tawonAgentDaemonSet        = "tawon-agent"
 )
 
 // componentStatus is the per-component slice of the health snapshot.
@@ -33,6 +31,23 @@ type componentStatus struct {
 	Desired int32  `json:"desired"`
 	Status  string `json:"status"`
 	Detail  string `json:"detail,omitempty"`
+}
+
+// directiveStatus is the per-directive slice in the directives breakdown.
+// One entry per DaemonSet matched by Config.DirectiveLabelSelector.
+type directiveStatus struct {
+	Name    string `json:"name"`
+	Ready   int32  `json:"ready"`
+	Desired int32  `json:"desired"`
+	Status  string `json:"status"`
+}
+
+// nodeAgentSummary is the per-node entry in agents_per_node. With one
+// DaemonSet per directive, a node may host multiple agent pods, so the
+// shape is counts rather than a single per-pod status string.
+type nodeAgentSummary struct {
+	Ready int `json:"ready"`
+	Total int `json:"total"`
 }
 
 // EoBHealth returns a structured health snapshot of the EoB stack.
@@ -73,12 +88,14 @@ func (t *EoBHealth) Call(ctx context.Context, _ json.RawMessage) (mcp.CallToolRe
 	callCtx, cancel := context.WithTimeout(ctx, k8sCallTimeout)
 	defer cancel()
 
+	agent, directives := t.directiveStatus(callCtx)
 	snapshot := map[string]any{
-		"operator":        t.deploymentStatus(callCtx, t.cfg.OperatorNamespace, tawonOperatorDeployment),
+		"operator":        t.deploymentStatus(callCtx, t.cfg.OperatorNamespace, t.cfg.OperatorDeploymentName),
 		"dashboard":       t.deploymentStatus(callCtx, t.cfg.TawonNamespace, tawonDashboardDeployment),
 		"streamstore":     t.statefulSetStatus(callCtx, t.cfg.TawonNamespace, tawonStreamstoreStatefulSet),
-		"webhook":         t.deploymentStatus(callCtx, t.cfg.TawonNamespace, tawonWebhookDeployment),
-		"agent":           t.daemonSetStatus(callCtx, t.cfg.TawonNamespace, tawonAgentDaemonSet),
+		"webhook":         t.webhookConfigStatus(callCtx, t.cfg.WebhookConfigName),
+		"agent":           agent,
+		"directives":      directives,
 		"agents_per_node": t.agentReadinessByNode(callCtx),
 	}
 	return jsonResult(snapshot)
@@ -116,40 +133,102 @@ func (t *EoBHealth) statefulSetStatus(ctx context.Context, ns, name string) comp
 	return cs
 }
 
-func (t *EoBHealth) daemonSetStatus(ctx context.Context, ns, name string) componentStatus {
-	cs := componentStatus{Kind: "DaemonSet"}
-	ds, err := t.kube.AppsV1().DaemonSets(ns).Get(ctx, name, metav1.GetOptions{})
+// webhookConfigStatus reports presence of the cluster-scoped
+// MutatingWebhookConfiguration installed by the EoB stack. The chart
+// installs a single MWC carrying one-or-more webhook entries (per
+// directive). Health is binary at the config-object level: present
+// counts as "ok"; missing is "absent". Endpoint reachability is not
+// probed here.
+func (t *EoBHealth) webhookConfigStatus(ctx context.Context, name string) componentStatus {
+	cs := componentStatus{Kind: "MutatingWebhookConfiguration"}
+	mwc, err := t.kube.AdmissionregistrationV1().MutatingWebhookConfigurations().Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return absentOrError(cs, err)
 	}
-	cs.Desired = ds.Status.DesiredNumberScheduled
-	cs.Ready = ds.Status.NumberReady
-	cs.Status = readyStatus(cs.Ready, cs.Desired)
+	count := int32(len(mwc.Webhooks))
+	cs.Desired = count
+	cs.Ready = count
+	if count == 0 {
+		cs.Status = "absent"
+	} else {
+		cs.Status = "ok"
+	}
 	return cs
 }
 
-// agentReadinessByNode lists agent pods in the Tawon namespace and groups
-// them by spec.nodeName, reporting Ready/NotReady. Pods without a node
-// (still pending scheduling) appear under the "<pending>" key. Returns
-// an error placeholder map if the List call fails.
+// directiveStatus discovers every per-directive DaemonSet in the Tawon
+// namespace via the configured label selector, then returns both an
+// aggregate componentStatus (suitable for the legacy "agent" key) and a
+// per-directive breakdown sorted by name for stable output.
+func (t *EoBHealth) directiveStatus(ctx context.Context) (componentStatus, []directiveStatus) {
+	cs := componentStatus{Kind: "DaemonSet"}
+	list, err := t.kube.AppsV1().DaemonSets(t.cfg.TawonNamespace).List(ctx, metav1.ListOptions{
+		LabelSelector: t.cfg.DirectiveLabelSelector,
+	})
+	if err != nil {
+		cs.Status = "error"
+		cs.Detail = err.Error()
+		return cs, nil
+	}
+	if len(list.Items) == 0 {
+		cs.Status = "absent"
+		return cs, []directiveStatus{}
+	}
+	perDirective := make([]directiveStatus, 0, len(list.Items))
+	var totalReady, totalDesired int32
+	for i := range list.Items {
+		ds := &list.Items[i]
+		perDirective = append(perDirective, directiveStatus{
+			Name:    ds.Name,
+			Ready:   ds.Status.NumberReady,
+			Desired: ds.Status.DesiredNumberScheduled,
+			Status:  readyStatus(ds.Status.NumberReady, ds.Status.DesiredNumberScheduled),
+		})
+		totalReady += ds.Status.NumberReady
+		totalDesired += ds.Status.DesiredNumberScheduled
+	}
+	sort.Slice(perDirective, func(i, j int) bool {
+		return perDirective[i].Name < perDirective[j].Name
+	})
+	cs.Ready = totalReady
+	cs.Desired = totalDesired
+	cs.Status = readyStatus(totalReady, totalDesired)
+	return cs, perDirective
+}
+
+// agentReadinessByNode lists agent pods (across all directive
+// DaemonSets) and groups them by spec.nodeName, reporting ready vs
+// total counts. Pods without an assigned node appear under "<pending>".
+// Returns an error placeholder map if the List call fails.
 func (t *EoBHealth) agentReadinessByNode(ctx context.Context) any {
-	selector := fmt.Sprintf("app=%s", tawonAgentDaemonSet)
 	pods, err := t.kube.CoreV1().Pods(t.cfg.TawonNamespace).List(ctx, metav1.ListOptions{
-		LabelSelector: selector,
+		LabelSelector: t.cfg.DirectiveLabelSelector,
 	})
 	if err != nil {
 		return map[string]string{"error": err.Error()}
 	}
-	byNode := make(map[string]string, len(pods.Items))
+	byNode := make(map[string]*nodeAgentSummary)
 	for i := range pods.Items {
 		p := &pods.Items[i]
 		node := p.Spec.NodeName
 		if node == "" {
 			node = "<pending>"
 		}
-		byNode[node] = podReady(p)
+		s := byNode[node]
+		if s == nil {
+			s = &nodeAgentSummary{}
+			byNode[node] = s
+		}
+		s.Total++
+		if isPodReady(p) {
+			s.Ready++
+		}
 	}
-	return byNode
+	out := make(map[string]nodeAgentSummary, len(byNode))
+	for k, v := range byNode {
+		out[k] = *v
+	}
+	return out
 }
 
 func absentOrError(cs componentStatus, err error) componentStatus {
@@ -173,13 +252,13 @@ func readyStatus(ready, desired int32) string {
 	}
 }
 
-func podReady(p *corev1.Pod) string {
+func isPodReady(p *corev1.Pod) bool {
 	for _, c := range p.Status.Conditions {
 		if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
-			return "Ready"
+			return true
 		}
 	}
-	return "NotReady"
+	return false
 }
 
 func jsonResult(v any) (mcp.CallToolResult, error) {

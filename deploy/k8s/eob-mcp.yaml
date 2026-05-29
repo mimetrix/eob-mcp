@@ -12,11 +12,17 @@
 # (registries.conf.d -> 172.31.44.247:5000). To iterate locally, build
 # and push to that registry directly; the manifest does not change.
 #
-# RBAC: a single ClusterRole + ClusterRoleBinding grants get on the
-# four workload kinds we inspect plus list on Pods. The verbs are
-# narrow but cluster-scoped because we read from two namespaces
-# (operators and tawon-operator). Tighten to two RoleBindings if a
-# stricter scope is required.
+# RBAC: a single ClusterRole + ClusterRoleBinding grants the minimum
+# verbs needed by eob_health and cluster_identity. We need:
+#   - get on Deployments/StatefulSets in two namespaces (operators, tawon-operator)
+#   - get + list on DaemonSets (per-directive DSs are discovered by
+#     label selector, not by fixed name)
+#   - list on Pods (for per-node agent readiness)
+#   - get on MutatingWebhookConfigurations (cluster-scoped; the EoB
+#     webhook lives there, not as a Deployment)
+# Verbs are narrow but the role is cluster-scoped because lookups span
+# two namespaces. Tighten to two RoleBindings if a stricter scope is
+# required.
 
 apiVersion: v1
 kind: ServiceAccount
@@ -35,11 +41,17 @@ metadata:
     app.kubernetes.io/name: eob-mcp
 rules:
   - apiGroups: ["apps"]
-    resources: ["deployments", "statefulsets", "daemonsets"]
+    resources: ["deployments", "statefulsets"]
     verbs: ["get"]
+  - apiGroups: ["apps"]
+    resources: ["daemonsets"]
+    verbs: ["get", "list"]
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["list"]
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingwebhookconfigurations"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
