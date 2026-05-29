@@ -1,0 +1,72 @@
+# golangci-lint configuration for eob-mcp.
+#
+# Memory-safety gates are enforced here. Any change that loosens these
+# settings should be justified in the PR description.
+
+run:
+  timeout: 5m
+  go: "1.23"
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck       # unchecked errors
+    - govet          # built-in static analysis
+    - ineffassign    # ineffective assignments
+    - staticcheck    # broad static analysis
+    - unused         # unused identifiers
+    - gosec          # security audit
+    - bodyclose      # http.Response.Body must be closed
+    - copyloopvar    # loop variable capture (Go 1.22+)
+    - errorlint      # error wrapping correctness
+    - forbidigo      # ban specific imports/functions (we use this for unsafe)
+    - gocritic       # additional checks
+    - misspell       # spelling in identifiers / comments
+    - nilerr         # returning nil with non-nil err and vice versa
+    - noctx          # net/http requests without context
+    - revive         # idiomatic Go style
+    - unconvert      # unnecessary type conversions
+    - unparam        # unused function params
+    - usestdlibvars  # use stdlib constants over magic strings
+
+linters-settings:
+  forbidigo:
+    # Memory-safety enforcement: ban opt-outs from Go's safety guarantees.
+    forbid:
+      - p: ^unsafe\.
+        msg: "use of unsafe.* is forbidden; isolate any required unsafe code in a vetted, fuzzed helper"
+      - p: ^reflect\.NewAt$
+        msg: "reflect.NewAt is an unsafe escape hatch; do not use"
+      - p: ^reflect\.UnsafePointer$
+        msg: "reflect.UnsafePointer is an unsafe escape hatch; do not use"
+      - p: ^runtime\.SetFinalizer$
+        msg: "runtime.SetFinalizer is brittle and rarely correct; prefer explicit Close()"
+    analyze-types: true
+
+  gosec:
+    excludes:
+      - G104  # errcheck handles unhandled errors at higher fidelity
+
+  errcheck:
+    check-type-assertions: true
+    # check-blank stays at its default (false): explicit `_ = err` is acceptable
+    # acknowledgement that the caller has nothing meaningful to do with the
+    # error (e.g. http.ResponseWriter.Write after status has been flushed).
+
+  revive:
+    rules:
+      - name: exported
+        arguments: ["disableStutteringCheck"]
+      - name: unused-parameter
+        disabled: true   # too noisy for http.HandlerFunc params
+
+issues:
+  exclude-rules:
+    # Test files can be slightly less strict (e.g. ignore body close on synthetic responses).
+    - path: _test\.go
+      linters:
+        - bodyclose
+        - errcheck
+        - gosec
+  max-issues-per-linter: 0
+  max-same-issues: 0

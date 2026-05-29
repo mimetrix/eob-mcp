@@ -1,0 +1,127 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.23"
+
+jobs:
+  vet-lint:
+    name: vet + lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: go vet
+        run: go vet ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.62.2
+
+  test:
+    name: test (race detector)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: go test -race
+        run: go test -race -count=1 -timeout=120s ./...
+
+  fuzz-smoke:
+    name: fuzz (60s smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: discover and run fuzz targets
+        run: |
+          set -euo pipefail
+          targets=$(grep -rEl '^func Fuzz[A-Z]' . --include='*.go' | xargs -r -n1 dirname | sort -u || true)
+          if [ -z "${targets}" ]; then
+            echo "no fuzz targets present yet — skipping"
+            exit 0
+          fi
+          for pkg in ${targets}; do
+            echo "== fuzzing $pkg =="
+            go test -run='^$' -fuzz='^Fuzz' -fuzztime=60s "$pkg"
+          done
+
+  vuln:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: govulncheck
+        run: govulncheck ./...
+
+  gosec:
+    name: gosec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@latest
+      - name: gosec
+        run: gosec -quiet ./...
+
+  build:
+    name: build (CGO_ENABLED=0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+      - name: go build (static)
+        run: |
+          CGO_ENABLED=0 GOOS=linux go build \
+            -trimpath \
+            -ldflags="-s -w -buildid=" \
+            -o bin/eob-mcp \
+            ./cmd/eob-mcp
+          file bin/eob-mcp
+          ls -lh bin/eob-mcp
+
+  image:
+    name: image build + scan
+    runs-on: ubuntu-latest
+    needs: [vet-lint, test, build]
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker build
+        run: docker build --build-arg VERSION="${GITHUB_SHA::8}" --build-arg COMMIT="${GITHUB_SHA}" -t eob-mcp:ci .
+      - name: trivy scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: eob-mcp:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
