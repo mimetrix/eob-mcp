@@ -25,9 +25,9 @@ jobs:
       - name: go vet
         run: go vet ./...
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.62.2
+          version: v2.12.2
 
   test:
     name: test (race detector)
@@ -73,9 +73,9 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
       - name: install govulncheck
-        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+        run: go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
       - name: govulncheck
-        run: govulncheck ./...
+        run: govulncheck -show verbose ./...
 
   gosec:
     name: gosec
