@@ -52,14 +52,19 @@ fleet-level system that consumes it.
               │   - calls inference service            │
               └─────┬───────────────────────────┬──────┘
                     │                           │
-            ┌───────▼─────────┐         ┌───────▼──────────────┐
-            │ Inference svc   │         │ MCP servers          │
-            │  (vLLM / Ollama │         │  (one per cluster):  │
-            │   + OSS model)  │         │   eob-mcp @ site A   │
-            └─────────────────┘         │   eob-mcp @ site B   │
-                                        │   eob-mcp @ site C   │
-                                        └──────────────────────┘
+            ┌───────▼─────────┐         ┌───────▼──────────────────────────┐
+            │ Inference svc   │         │ eob-mcp servers (one per         │
+            │  (vLLM / Ollama │         │ cluster), each exposing:         │
+            │   + OSS model)  │         │   - MCP over HTTP /mcp           │
+            └─────────────────┘         │   - gRPC over TLS (federation)   │
+                                        │   site A | site B | site C ...  │
+                                        └──────────────────────────────────┘
 ```
+
+Each `eob-mcp` exposes the same surface twice: MCP for chat-style
+consumers (LLM agents) and gRPC for programmatic federation (an
+aggregator fanning out to N sites). Both front doors hit the same
+in-process service struct, so behavior cannot drift between them.
 
 ### The four components, and what they own
 
@@ -104,13 +109,24 @@ on top of the OSS chat client's existing infrastructure.
 ## Data sovereignty story
 
 The most important property of this architecture: **captured payload bytes
-never leave their home cluster.**
+stay near their home cluster**, governed by where the consumer chooses to
+do the heavy lifting.
 
-Each `eob-mcp` reads JetStream data inside its own cluster, runs the
-requested decode / aggregation / search locally, and returns *structured
-results* (counts, summaries, decoded fields, sampled snippets) up to the
-console. The console then synthesizes a natural-language response via the
-inference service.
+`eob-mcp` itself is deliberately narrow: it returns Tawon's raw JSON
+envelopes from JetStream with an optional server-side `jq` filter, plus
+the federation `cluster` envelope. **It does not decode bytes and does
+not aggregate.** Those responsibilities sit in:
+
+- **Co-located in-cluster services** — e.g. an `eob-decoder` sidecar
+  that reads raw streams, dissects via `tshark`, and publishes decoded
+  streams back to JetStream. `eob-mcp` then serves the decoded streams
+  like any other. Payload bytes never leave the cluster.
+- **The consumer** — if data-sovereignty isn't the binding constraint
+  for a given workload, the consumer can pull raw envelopes via
+  `StreamRead` and run `tshark` / DuckDB / `jq` locally.
+
+The console then synthesizes a natural-language response via the
+inference service over whichever structured results came back.
 
 What crosses the wire:
 
@@ -122,17 +138,24 @@ What crosses the wire:
 | Console → inference svc | prompts + structured tool results | same |
 | Inference svc → console | model output | same |
 
-What does **not** cross the wire under normal operation:
+What does **not** cross the wire under normal operation, when the
+recommended in-cluster decoder pipeline is in place:
 
 - Raw packet captures (stay in the cluster's NATS JetStream)
-- Full payload byte streams (stay in JetStream; only summaries / decoded
-  fields / sampled snippets return)
+- Full payload byte streams (stay in JetStream; `eob-decoder` produces
+  decoded summary streams that the console reads instead)
 - Pod / container / process metadata for non-sampled traffic
 - Any data from clusters the user isn't authorized to query
 
-`eob-mcp` is the policy enforcement point. Redaction (mask high-entropy
-strings, known PII patterns) is a per-tool flag with safe defaults — see
-the per-cluster RBAC section below.
+If a consumer asks for raw envelopes directly via `StreamRead` without
+a decoder pipeline in front, those bytes *do* cross the wire (gated by
+the consumer's authentication + the per-tool RBAC). The data-sovereignty
+guarantee is architectural — it's earned by deploying the decoder
+in-cluster, not by clever `eob-mcp` server-side logic.
+
+`eob-mcp` is the authentication + authorization + audit boundary;
+content policy (redaction, sampling) lives in the decoder pipeline or
+the console.
 
 For air-gapped sites: the inference service can run inside the same
 cluster as the console (or any sovereignty zone). No traffic ever needs
@@ -210,57 +233,65 @@ gets the console; no dedicated ops infrastructure.
 For a fleet-aware design that doesn't require retrofits, every `eob-mcp`
 instance exposes three things uniformly:
 
-### 1. Cluster identity tool
+### 1. Cluster identity RPC
 
 ```
-cluster_identity() → {
-  site_id:      "srikan-tf-test-0",
-  tenant:       "platform-svc-nbryikfr",
-  region:       "us-east-2",
-  k8s_version:  "v1.34.2-ves",
-  eob_version:  "v3.0.0-rc4",
-  mcp_version:  "0.1.0",
-  capabilities: ["acquisition", "analysis", "redaction"]
+ClusterIdentity() → {
+  cluster: {
+    site_id: "srikan-tf-test-0",
+    tenant:  "platform-svc-nbryikfr",
+    region:  "us-east-2"
+  },
+  k8s_version: "v1.34.2-ves",
+  eob_version: "v3.0.0-rc4",
+  mcp_version: "0.1.0"
 }
 ```
 
+(A `capabilities` field will arrive once we have a versioned feature
+flag bucket worth advertising.)
+
 Lets the console enumerate connected clusters without external metadata
-and discover which capabilities each one supports.
+and reveal which one a result came from.
 
-### 2. Origin-stamped results
+### 2. Origin-stamped results — the `cluster` envelope
 
-Every tool's result includes a `_source` block:
+Every RPC's response carries a `cluster` block (the same shape used in
+`ClusterIdentity` above):
 
 ```json
 {
-  "_source": {
+  "cluster": {
     "site_id": "srikan-tf-test-0",
-    "ts":      "2026-05-29T19:30:11Z",
-    "mcp":     "eob-mcp/0.1.0"
+    "tenant":  "platform-svc-nbryikfr",
+    "region":  "us-east-2"
   },
-  "result": { ... }
+  ...response body...
 }
 ```
 
-So when the console merges results from N clusters, every row knows where
-it came from.
+So when the aggregator merges results from N clusters, every payload
+already knows where it came from — no out-of-band site tagging needed.
+This is encoded in `proto/eob/v1/service.proto` as the `ClusterRef`
+message, embedded as field 1 of every response message.
 
-### 3. Standardized tool names + signatures
+### 3. Standardized RPC names + signatures
 
-Tools have **exactly** the same names and parameter signatures across
-every `eob-mcp`. No site-specific extensions in v1. The console can fan
+Tools / RPCs have **exactly** the same names and signatures across
+every `eob-mcp`. No site-specific extensions in v1; new behavior comes
+through proto-versioned additions (`eob.v2`). The aggregator can fan
 out generically:
 
 ```
-for srv in connected_servers:
-    srv.call("eob_health")
+for site_conn in fleet:
+    site_conn.EoBHealth(EoBHealthRequest{})
 ```
 
 Without a name registry to consult.
 
 These three properties are easy to ship in v1 and expensive to retrofit
-after an installed base exists. The `eob-mcp` design as documented in
-`README.md` includes them from day one.
+after an installed base exists. They are encoded in the `.proto` file,
+so both the MCP wrappers and the gRPC front door inherit them for free.
 
 ---
 
@@ -271,8 +302,14 @@ Three layers, each enforced at its own boundary:
 | Layer | Enforced where | Granularity |
 |---|---|---|
 | **User → console** | Console backend (OIDC + groups) | role: viewer / operator / admin |
-| **Console → `eob-mcp`** | `eob-mcp` (bearer token in MCP request) | per-cluster, per-role; tool/resource allowlist |
+| **Console → `eob-mcp`** | `eob-mcp` (bearer token on the MCP path; **mTLS on the gRPC path** when the aggregator is the caller) | per-cluster, per-role; tool/resource allowlist |
 | **`eob-mcp` → cluster** | Kubernetes RBAC on `eob-mcp`'s ServiceAccount | namespace + verb level |
+
+The dual-front-door design maps naturally to this split: MCP is the
+"agent talking" path (bearer-auth, lower trust) while gRPC is the
+"infrastructure-to-infrastructure" path (mTLS, mutual identity). The
+underlying authorization decisions on the service side are identical;
+only the authentication channel differs.
 
 This keeps the trust boundary tight: a compromised console doesn't get
 arbitrary cluster access — it can only call the MCP tools the per-cluster
@@ -308,10 +345,12 @@ a separate effort that should be evaluated on its own merits once
 1. **Console transport between web UI and backend.** WebSocket vs. plain
    HTTP+SSE. Both work for streaming tool-call results to the UI;
    WebSocket is more bidirectional but requires more frontend plumbing.
-2. **Console authentication to per-cluster `eob-mcp`.** Static bearer
-   tokens per cluster (simple, rotatable) vs. mTLS (stronger, more
-   infrastructure) vs. workload identity / SPIFFE (cleanest, but assumes
-   the cluster is set up for it).
+2. **~~Console authentication to per-cluster `eob-mcp`.~~** *Partially
+   resolved.* The gRPC front door supports mTLS today (flag-gated, off
+   by default — see `-tls-client-ca` in `README.md`). The MCP front
+   door still defers to bearer tokens. Remaining open piece is the
+   cert provisioning story (cert-manager vs. SPIFFE vs. external CA);
+   the wire-level protocol choice is settled.
 3. **Inference deployment shape.** Single shared inference cluster vs.
    per-site (sovereignty argument) vs. per-tenant (cost-isolation
    argument). May depend on customer.

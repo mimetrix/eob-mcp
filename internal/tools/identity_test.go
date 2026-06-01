@@ -8,10 +8,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/version"
-	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/kubernetes"
 	fakediscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/mimetrix/eob-mcp/internal/config"
+	"github.com/mimetrix/eob-mcp/internal/service"
 )
 
 func newTestConfig() *config.Config {
@@ -41,16 +43,22 @@ func fakeWithServerVersion(t *testing.T, gitVersion string) *fake.Clientset {
 	return cs
 }
 
+// newTool wires a tool around a service constructed with the given kube.
+func newTool(cfg *config.Config, kube kubernetes.Interface) *ClusterIdentity {
+	return NewClusterIdentity(service.New(cfg, kube, nil, nil))
+}
+
 func TestClusterIdentity_NoKubeReturnsEmptyVersions(t *testing.T) {
 	t.Parallel()
-	tool := NewClusterIdentity(newTestConfig(), nil)
+	tool := newTool(newTestConfig(), nil)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
 		t.Fatalf("call: %v", err)
 	}
 	got := parseIdentity(t, res.Content[0].Text)
-	if got["site_id"] != "site-x" {
-		t.Errorf("site_id: got %q, want %q", got["site_id"], "site-x")
+	cluster := mustMap(t, got["cluster"])
+	if cluster["site_id"] != "site-x" {
+		t.Errorf("cluster.site_id: got %q, want %q", cluster["site_id"], "site-x")
 	}
 	if got["k8s_version"] != "" {
 		t.Errorf("k8s_version: got %q, want empty", got["k8s_version"])
@@ -63,7 +71,7 @@ func TestClusterIdentity_NoKubeReturnsEmptyVersions(t *testing.T) {
 func TestClusterIdentity_ReportsServerVersion(t *testing.T) {
 	t.Parallel()
 	cs := fakeWithServerVersion(t, "v1.31.4")
-	tool := NewClusterIdentity(newTestConfig(), cs)
+	tool := newTool(newTestConfig(), cs)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
 		t.Fatalf("call: %v", err)
@@ -90,7 +98,7 @@ func TestClusterIdentity_ReportsEoBVersionFromOperatorDeployment(t *testing.T) {
 		},
 	}
 	cs := fake.NewSimpleClientset(dep)
-	tool := NewClusterIdentity(cfg, cs)
+	tool := newTool(cfg, cs)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
 		t.Fatalf("call: %v", err)
@@ -124,7 +132,7 @@ func TestClusterIdentity_PrefersVersionLabelOverImageTag(t *testing.T) {
 		},
 	}
 	cs := fake.NewSimpleClientset(dep)
-	tool := NewClusterIdentity(cfg, cs)
+	tool := newTool(cfg, cs)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
 		t.Fatalf("call: %v", err)
@@ -155,7 +163,7 @@ func TestClusterIdentity_PrefersManagerContainerImage(t *testing.T) {
 		},
 	}
 	cs := fake.NewSimpleClientset(dep)
-	tool := NewClusterIdentity(cfg, cs)
+	tool := newTool(cfg, cs)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
 		t.Fatalf("call: %v", err)
@@ -169,7 +177,7 @@ func TestClusterIdentity_PrefersManagerContainerImage(t *testing.T) {
 func TestClusterIdentity_MissingOperatorDeploymentLeavesEoBVersionEmpty(t *testing.T) {
 	t.Parallel()
 	cs := fake.NewSimpleClientset() // no objects
-	tool := NewClusterIdentity(newTestConfig(), cs)
+	tool := newTool(newTestConfig(), cs)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
 		t.Fatalf("call: %v", err)
@@ -180,31 +188,24 @@ func TestClusterIdentity_MissingOperatorDeploymentLeavesEoBVersionEmpty(t *testi
 	}
 }
 
-func TestImageTag(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		in, want string
-	}{
-		{"", ""},
-		{"image", ""},
-		{"image:v1", "v1"},
-		{"quay.io/foo/bar:rc6", "rc6"},
-		{"172.31.44.247:5000/mantisnet/tawon-operator:rc6", "rc6"},
-		{"quay.io/foo/bar@sha256:abc123", ""},
-		{"quay.io/foo/bar:rc6@sha256:abc123", "rc6"},
-	}
-	for _, c := range cases {
-		if got := imageTag(c.in); got != c.want {
-			t.Errorf("imageTag(%q) = %q, want %q", c.in, got, c.want)
-		}
-	}
-}
-
-func parseIdentity(t *testing.T, body string) map[string]string {
+// parseIdentity decodes the MCP text body. Shape is the protojson
+// rendering of ClusterIdentityResponse: top-level k8s_version /
+// eob_version / mcp_version, with site_id/tenant/region nested under
+// "cluster".
+func parseIdentity(t *testing.T, body string) map[string]any {
 	t.Helper()
-	var got map[string]string
+	var got map[string]any
 	if err := json.Unmarshal([]byte(body), &got); err != nil {
 		t.Fatalf("unmarshal identity: %v\nbody=%s", err, body)
 	}
 	return got
+}
+
+func mustMap(t *testing.T, v any) map[string]any {
+	t.Helper()
+	m, ok := v.(map[string]any)
+	if !ok {
+		t.Fatalf("expected map[string]any, got %T (%v)", v, v)
+	}
+	return m
 }

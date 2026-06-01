@@ -12,17 +12,29 @@
 # (registries.conf.d -> 172.31.44.247:5000). To iterate locally, build
 # and push to that registry directly; the manifest does not change.
 #
-# RBAC: a single ClusterRole + ClusterRoleBinding grants the minimum
-# verbs needed by eob_health and cluster_identity. We need:
-#   - get on Deployments/StatefulSets in two namespaces (operators, tawon-operator)
-#   - get + list on DaemonSets (per-directive DSs are discovered by
-#     label selector, not by fixed name)
-#   - list on Pods (for per-node agent readiness)
-#   - get on MutatingWebhookConfigurations (cluster-scoped; the EoB
-#     webhook lives there, not as a Deployment)
+# RBAC: a single ClusterRole + ClusterRoleBinding grants the verbs
+# needed by all registered tools. Three buckets:
+#
+# Read-only health/identity (eob_health, cluster_identity):
+#   - get Deployments/StatefulSets in two namespaces (operators, tawon-operator)
+#   - get + list DaemonSets (per-directive DSs are discovered by label
+#     selector, not fixed name)
+#   - list Pods (for per-node agent readiness)
+#   - get MutatingWebhookConfigurations (the cluster-scoped EoB webhook
+#     `eob-mutate`, not a Deployment)
+#
+# Generic CRD CRUD (resource_list, _get, _apply, _delete):
+#   - full verbs on tawon.mantisnet.com/* so the dynamic client can
+#     create/update/delete ClusterDirectives, Dashboards, StreamStores,
+#     Streams, DirectiveBindings, TopologyAggregators
+#
+# CRD schema discovery (resource_schema):
+#   - get + list on apiextensions.k8s.io/customresourcedefinitions so we
+#     can pull the openAPIV3Schema for any kind on demand
+#
 # Verbs are narrow but the role is cluster-scoped because lookups span
-# two namespaces. Tighten to two RoleBindings if a stricter scope is
-# required.
+# multiple namespaces. Tighten to per-namespace RoleBindings if a
+# stricter scope is required (would lose the cluster-scoped CRD list).
 
 apiVersion: v1
 kind: ServiceAccount
@@ -52,6 +64,17 @@ rules:
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["mutatingwebhookconfigurations"]
     verbs: ["get"]
+  # Full CRUD on Tawon CRDs — enables resource_apply / resource_delete /
+  # resource_get / resource_list for ClusterDirective, Dashboard,
+  # StreamStore, Stream, DirectiveBinding, Directive, TopologyAggregator.
+  - apiGroups: ["tawon.mantisnet.com"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # CRD schema discovery — resource_schema lists CRDs and extracts the
+  # OpenAPI v3 schema for any kind.
+  - apiGroups: ["apiextensions.k8s.io"]
+    resources: ["customresourcedefinitions"]
+    verbs: ["get", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -105,18 +128,35 @@ spec:
       containers:
         - name: eob-mcp
           image: quay.io/mantisnet/eob-mcp:dev
-          imagePullPolicy: IfNotPresent
+          # Always pull while we share a single :dev tag across builds —
+          # otherwise the kubelet sticks with the locally cached image
+          # and rollout restarts silently re-run the previous binary.
+          # Pulls hit the in-cluster registry mirror so the cost is local.
+          imagePullPolicy: Always
           args:
-            # 18443 is used (not 8443) because hostNetwork=true means
-            # the container binds directly on the node interface and
-            # 8443 is already taken by other host processes on every
-            # node. The Service in-front of this Pod still publishes
-            # 8443 to consumers.
+            # 18443 / 19443 are used (not 8443 / 9443) because
+            # hostNetwork=true means the container binds directly on the
+            # node interface and the lower-numbered ports are already
+            # taken by other host processes on every node. The Service
+            # in-front of this Pod still publishes 8443 (MCP) and 9443
+            # (gRPC) to consumers.
             - "-listen=:18443"
+            - "-grpc-listen=:19443"
             - "-log-level=info"
+            # TLS hooks (disabled by default). To enable: mount a TLS
+            # Secret at /etc/eob-mcp/tls (see volumes/volumeMounts blocks
+            # below, currently commented), then uncomment these args. The
+            # same cert/key serves both listeners. Add -tls-client-ca for
+            # mTLS once an aggregator CA exists.
+            # - "-tls-cert=/etc/eob-mcp/tls/tls.crt"
+            # - "-tls-key=/etc/eob-mcp/tls/tls.key"
+            # - "-tls-client-ca=/etc/eob-mcp/tls/ca.crt"
           ports:
             - name: mcp
               containerPort: 18443
+              protocol: TCP
+            - name: grpc
+              containerPort: 19443
               protocol: TCP
           env:
             # Identity values surface in cluster_identity output. Set
@@ -133,6 +173,14 @@ spec:
             #   value: "operators"
             # - name: EOB_TAWON_NAMESPACE
             #   value: "tawon-operator"
+            # Data-plane NATS endpoint. When set, Stream* RPCs come
+            # online. When unset, Stream* RPCs are not registered and
+            # the server logs "EOB_NATS_URL unset; Stream* RPCs disabled".
+            # The Tawon chart names this Service with a chart-generated
+            # suffix; verify against `kubectl -n tawon-operator get svc`
+            # before applying.
+            - name: EOB_NATS_URL
+              value: "nats://tawon-streamstore-d2f18e.tawon-operator.svc:4222"
           readinessProbe:
             httpGet:
               path: /readyz
@@ -161,6 +209,19 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
+          # To enable TLS: uncomment volumeMounts + volumes blocks and
+          # uncomment the matching -tls-* args above. The Secret is
+          # expected to be named "eob-mcp-tls" with keys tls.crt, tls.key,
+          # and (for mTLS) ca.crt. cert-manager Certificate resources
+          # produce this layout natively.
+          # volumeMounts:
+          #   - name: tls
+          #     mountPath: /etc/eob-mcp/tls
+          #     readOnly: true
+      # volumes:
+      #   - name: tls
+      #     secret:
+      #       secretName: eob-mcp-tls
 ---
 apiVersion: v1
 kind: Service
@@ -178,4 +239,8 @@ spec:
     - name: mcp
       port: 8443
       targetPort: mcp        # resolves to containerPort 18443 by name
+      protocol: TCP
+    - name: grpc
+      port: 9443
+      targetPort: grpc       # resolves to containerPort 19443 by name
       protocol: TCP

@@ -8,38 +8,47 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+
+	"github.com/mimetrix/eob-mcp/internal/config"
+	"github.com/mimetrix/eob-mcp/internal/service"
 )
+
+func newHealthTool(cfg *config.Config, kube kubernetes.Interface) *EoBHealth {
+	return NewEoBHealth(service.New(cfg, kube, nil, nil))
+}
 
 func TestEoBHealth_NoKubeReturnsStub(t *testing.T) {
 	t.Parallel()
-	tool := NewEoBHealth(newTestConfig(), nil)
+	tool := newHealthTool(newTestConfig(), nil)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
 		t.Fatalf("call: %v", err)
 	}
 	got := parseHealth(t, res.Content[0].Text)
-	if got["status"] != "no-cluster" {
-		t.Errorf("status: got %v, want %q", got["status"], "no-cluster")
+	if got["cluster_state"] != "no-cluster" {
+		t.Errorf("cluster_state: got %v, want %q", got["cluster_state"], "no-cluster")
 	}
 }
 
 func TestEoBHealth_AllComponentsAbsentWhenEmptyCluster(t *testing.T) {
 	t.Parallel()
 	cs := fake.NewSimpleClientset()
-	tool := NewEoBHealth(newTestConfig(), cs)
+	tool := newHealthTool(newTestConfig(), cs)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
 		t.Fatalf("call: %v", err)
 	}
 	got := parseHealth(t, res.Content[0].Text)
+	components := mustMap(t, got["components"])
 	for _, key := range []string{"operator", "dashboard", "streamstore", "webhook", "agent"} {
-		comp := got[key].(map[string]any)
+		comp := mustMap(t, components[key])
 		if comp["status"] != "absent" {
 			t.Errorf("%s: status=%v, want absent", key, comp["status"])
 		}
 	}
-	directives := got["directives"].([]any)
+	directives, _ := got["directives"].([]any)
 	if len(directives) != 0 {
 		t.Errorf("directives: got %d entries, want 0", len(directives))
 	}
@@ -73,19 +82,20 @@ func TestEoBHealth_HealthyStackReportsOK(t *testing.T) {
 		newDirectiveDS(cfg.TawonNamespace, "tawon-directive-foo", 3, 3),
 		newDirectiveDS(cfg.TawonNamespace, "tawon-directive-bar", 3, 3),
 	)
-	tool := NewEoBHealth(cfg, cs)
+	tool := newHealthTool(cfg, cs)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
 		t.Fatalf("call: %v", err)
 	}
 	got := parseHealth(t, res.Content[0].Text)
+	components := mustMap(t, got["components"])
 	for _, key := range []string{"operator", "dashboard", "streamstore", "webhook", "agent"} {
-		comp := got[key].(map[string]any)
+		comp := mustMap(t, components[key])
 		if comp["status"] != "ok" {
 			t.Errorf("%s: status=%v, want ok", key, comp["status"])
 		}
 	}
-	agent := got["agent"].(map[string]any)
+	agent := mustMap(t, components["agent"])
 	if agent["ready"].(float64) != 6 || agent["desired"].(float64) != 6 {
 		t.Errorf("agent aggregate: got ready=%v desired=%v, want 6/6", agent["ready"], agent["desired"])
 	}
@@ -105,13 +115,14 @@ func TestEoBHealth_DegradedDirectiveDaemonSet(t *testing.T) {
 	cs := fake.NewSimpleClientset(
 		newDirectiveDS(cfg.TawonNamespace, "tawon-directive-foo", 3, 2),
 	)
-	tool := NewEoBHealth(cfg, cs)
+	tool := newHealthTool(cfg, cs)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
 		t.Fatalf("call: %v", err)
 	}
 	got := parseHealth(t, res.Content[0].Text)
-	agent := got["agent"].(map[string]any)
+	components := mustMap(t, got["components"])
+	agent := mustMap(t, components["agent"])
 	if agent["status"] != "degraded" {
 		t.Errorf("agent status: got %v, want degraded", agent["status"])
 	}
@@ -123,13 +134,14 @@ func TestEoBHealth_DegradedDirectiveDaemonSet(t *testing.T) {
 func TestEoBHealth_WebhookAbsentWhenMWCMissing(t *testing.T) {
 	t.Parallel()
 	cs := fake.NewSimpleClientset() // no MWC
-	tool := NewEoBHealth(newTestConfig(), cs)
+	tool := newHealthTool(newTestConfig(), cs)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
 		t.Fatalf("call: %v", err)
 	}
 	got := parseHealth(t, res.Content[0].Text)
-	webhook := got["webhook"].(map[string]any)
+	components := mustMap(t, got["components"])
+	webhook := mustMap(t, components["webhook"])
 	if webhook["status"] != "absent" {
 		t.Errorf("webhook status: got %v, want absent", webhook["status"])
 	}
@@ -164,18 +176,18 @@ func TestEoBHealth_AgentPodsByNodeAggregatesPerNode(t *testing.T) {
 		mkPod("foo-b", "master-1", true),
 		mkPod("bar-b", "master-1", false),
 	)
-	tool := NewEoBHealth(cfg, cs)
+	tool := newHealthTool(cfg, cs)
 	res, err := tool.Call(t.Context(), nil)
 	if err != nil {
 		t.Fatalf("call: %v", err)
 	}
 	got := parseHealth(t, res.Content[0].Text)
-	byNode := got["agents_per_node"].(map[string]any)
-	m0 := byNode["master-0"].(map[string]any)
+	byNode := mustMap(t, got["agents_per_node"])
+	m0 := mustMap(t, byNode["master-0"])
 	if m0["ready"].(float64) != 2 || m0["total"].(float64) != 2 {
 		t.Errorf("master-0: got ready=%v total=%v, want 2/2", m0["ready"], m0["total"])
 	}
-	m1 := byNode["master-1"].(map[string]any)
+	m1 := mustMap(t, byNode["master-1"])
 	if m1["ready"].(float64) != 1 || m1["total"].(float64) != 2 {
 		t.Errorf("master-1: got ready=%v total=%v, want 1/2", m1["ready"], m1["total"])
 	}

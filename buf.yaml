@@ -1,0 +1,13 @@
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - STANDARD
+  except:
+    # service.proto intentionally violates SERVICE_SUFFIX (the service is
+    # named "EoBService", not "EoBServiceService"). Keep the natural name.
+    - SERVICE_SUFFIX
+breaking:
+  use:
+    - FILE

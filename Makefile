@@ -84,6 +84,16 @@ clean:
 tidy:
 	go mod tidy
 
+.PHONY: proto
+proto:
+	@command -v buf >/dev/null 2>&1 || { echo "buf not installed; see https://buf.build/docs/installation"; exit 1; }
+	buf lint
+	buf generate
+
+.PHONY: proto-clean
+proto-clean:
+	rm -rf gen/
+
 .PHONY: help
 help:
 	@echo "Targets:"
@@ -96,6 +106,8 @@ help:
 	@echo "  vuln          Run govulncheck"
 	@echo "  sec           Run gosec"
 	@echo "  check         vet + lint + test + vuln + sec"
+	@echo "  proto         buf lint + buf generate (regenerates gen/go/)"
+	@echo "  proto-clean   Remove gen/"
 	@echo "  image         Build the container image"
 	@echo "  image-scan    Build and scan the image with trivy"
 	@echo "  push          docker push \$$(IMAGE)"

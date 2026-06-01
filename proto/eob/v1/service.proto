@@ -1,0 +1,256 @@
+syntax = "proto3";
+
+package eob.v1;
+
+option go_package = "github.com/mimetrix/eob-mcp/gen/go/eob/v1;eobv1";
+
+import "google/protobuf/struct.proto";
+
+// EoBService is the unified surface exposed by eob-mcp. Both the MCP
+// front door and the gRPC listener delegate to a single in-process
+// implementation of this service. Each RPC corresponds 1:1 with one MCP
+// tool of the snake_cased same name (e.g. ClusterIdentity ↔ cluster_identity).
+//
+// Federation envelope: every response carries a ClusterRef tagging which
+// site produced it, so an aggregator fanning out to N sites can key and
+// merge results without out-of-band context.
+service EoBService {
+  rpc ClusterIdentity(ClusterIdentityRequest) returns (ClusterIdentityResponse);
+  rpc EoBHealth(EoBHealthRequest) returns (EoBHealthResponse);
+  rpc ResourceList(ResourceListRequest) returns (ResourceListResponse);
+  rpc ResourceGet(ResourceGetRequest) returns (ResourceGetResponse);
+  rpc ResourceApply(ResourceApplyRequest) returns (ResourceApplyResponse);
+  rpc ResourceDelete(ResourceDeleteRequest) returns (ResourceDeleteResponse);
+  rpc ResourceSchema(ResourceSchemaRequest) returns (ResourceSchemaResponse);
+
+  // Data plane — typed read-side over Tawon's JetStream output. No
+  // decoding, no aggregation; consumers compose tshark / DuckDB / jq
+  // externally. See docs/ARCHITECTURE.md.
+  rpc StreamList(StreamListRequest) returns (StreamListResponse);
+  rpc StreamStats(StreamStatsRequest) returns (StreamStatsResponse);
+  rpc StreamRead(StreamReadRequest) returns (StreamReadResponse);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Common types
+// ──────────────────────────────────────────────────────────────────────
+
+// ClusterRef identifies the site that produced a response. An aggregator
+// uses (site_id, tenant) as the disambiguation key when merging results
+// from multiple eob-mcp instances.
+message ClusterRef {
+  string site_id = 1;
+  string tenant  = 2;
+  string region  = 3;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// ClusterIdentity
+// ──────────────────────────────────────────────────────────────────────
+
+message ClusterIdentityRequest {}
+
+message ClusterIdentityResponse {
+  ClusterRef cluster     = 1;
+  string     k8s_version = 2;
+  string     eob_version = 3;
+  string     mcp_version = 4;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// EoBHealth
+// ──────────────────────────────────────────────────────────────────────
+
+message EoBHealthRequest {}
+
+// status is one of: "ok" | "degraded" | "absent" | "error".
+message ComponentStatus {
+  string kind    = 1;
+  int32  ready   = 2;
+  int32  desired = 3;
+  string status  = 4;
+  string detail  = 5;
+}
+
+message DirectiveStatus {
+  string name    = 1;
+  int32  ready   = 2;
+  int32  desired = 3;
+  string status  = 4;
+}
+
+// With one DaemonSet per directive, a node may host multiple agent pods;
+// the shape is counts rather than a single per-pod string.
+message NodeAgentSummary {
+  int32 ready = 1;
+  int32 total = 2;
+}
+
+message EoBHealthResponse {
+  ClusterRef                    cluster         = 1;
+  // components keys: "operator", "dashboard", "streamstore", "webhook",
+  // "agent" (aggregate of all directive DaemonSets).
+  map<string, ComponentStatus>  components      = 2;
+  // Per-directive DaemonSet breakdown, sorted by name for stable output.
+  repeated DirectiveStatus      directives      = 3;
+  // Per-node agent pod counts; pods without an assigned node appear under "<pending>".
+  map<string, NodeAgentSummary> agents_per_node = 4;
+  // cluster_state is "connected" (eob-mcp has a kube client) or
+  // "no-cluster" (started without in-cluster or kubeconfig access). When
+  // "no-cluster", components/directives/agents_per_node are empty.
+  string                        cluster_state   = 5;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Resource* (generic CRD CRUD)
+//
+// api_group defaults to the server's configured CRD group
+// (typically "tawon.mantisnet.com") when omitted.
+// ──────────────────────────────────────────────────────────────────────
+
+message ResourceListRequest {
+  string kind           = 1;
+  string api_group      = 2;
+  string namespace      = 3;
+  string label_selector = 4;
+}
+
+message ResourceListResponse {
+  ClusterRef                      cluster    = 1;
+  string                          kind       = 2;
+  string                          api_group  = 3;
+  bool                            namespaced = 4;
+  int32                           count      = 5;
+  // One Struct per item — slim summary produced server-side.
+  repeated google.protobuf.Struct items      = 6;
+}
+
+message ResourceGetRequest {
+  string kind      = 1;
+  string api_group = 2;
+  string namespace = 3;
+  string name      = 4;
+}
+
+message ResourceGetResponse {
+  ClusterRef             cluster = 1;
+  // Full unstructured k8s object; Struct round-trips JSON losslessly.
+  google.protobuf.Struct object  = 2;
+}
+
+message ResourceApplyRequest {
+  string manifest = 1;
+  bool   dry_run  = 2;
+  bool   force    = 3;
+}
+
+message ResourceApplyResponse {
+  ClusterRef cluster          = 1;
+  string     kind             = 2;
+  string     api_group        = 3;
+  string     namespace        = 4;
+  string     name             = 5;
+  bool       namespaced       = 6;
+  bool       dry_run          = 7;
+  string     uid              = 8;
+  string     resource_version = 9;
+  int64      generation       = 10;
+}
+
+message ResourceDeleteRequest {
+  string kind      = 1;
+  string api_group = 2;
+  string namespace = 3;
+  string name      = 4;
+}
+
+// status is one of: "deleted" | "notFound".
+message ResourceDeleteResponse {
+  ClusterRef cluster = 1;
+  string     kind    = 2;
+  string     name    = 3;
+  string     status  = 4;
+}
+
+message ResourceSchemaRequest {
+  string kind      = 1;
+  string api_group = 2;
+}
+
+message ResourceSchemaResponse {
+  ClusterRef             cluster           = 1;
+  string                 group             = 2;
+  string                 kind              = 3;
+  string                 storage_version   = 4;
+  google.protobuf.Struct openapi_v3_schema = 5;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Stream* — data plane
+// ──────────────────────────────────────────────────────────────────────
+
+// StreamInfo summarizes one NATS JetStream stream.
+message StreamInfo {
+  string name     = 1;
+  uint64 messages = 2;
+  uint64 bytes    = 3;
+  // RFC3339 timestamps; empty when the stream is empty.
+  string first_ts = 4;
+  string last_ts  = 5;
+}
+
+message StreamListRequest {}
+
+message StreamListResponse {
+  ClusterRef          cluster = 1;
+  repeated StreamInfo streams = 2;
+}
+
+message StreamStatsRequest {
+  string name  = 1;
+  // RFC3339 window bounds; empty means open-ended on that side.
+  string since = 2;
+  string until = 3;
+}
+
+message StreamStatsResponse {
+  ClusterRef cluster  = 1;
+  string     name     = 2;
+  uint64     messages = 3;
+  uint64     bytes    = 4;
+  string     since    = 5;
+  string     until    = 6;
+}
+
+message StreamReadRequest {
+  string name   = 1;
+  // RFC3339 window bounds; empty means deliver from oldest /
+  // unbounded upper.
+  string since  = 2;
+  string until  = 3;
+  // Maximum messages to return. 0 → server default. Capped server-side.
+  int32  limit  = 4;
+  // jq expression evaluated against each message's decoded JSON; only
+  // messages where the expression yields a truthy value are returned.
+  // Empty → no filter. Syntax is jq (itchyny/gojq); we do not invent
+  // an expression language.
+  string filter = 5;
+}
+
+// RawEnvelope is one Tawon envelope read from JetStream. data is the
+// envelope's JSON, decoded once server-side so consumers (and the jq
+// filter) get a structured object rather than bytes. Tawon's wire
+// format is unchanged — we do not transform fields.
+message RawEnvelope {
+  string                 subject   = 1;
+  uint64                 sequence  = 2;
+  string                 timestamp = 3; // RFC3339
+  google.protobuf.Struct data      = 4;
+}
+
+message StreamReadResponse {
+  ClusterRef           cluster  = 1;
+  string               name     = 2;
+  int32                count    = 3;
+  repeated RawEnvelope messages = 4;
+}

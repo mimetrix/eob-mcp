@@ -10,6 +10,8 @@ const (
 	defaultOperatorDeploymentName = "tawon-operator-controller-manager"
 	defaultWebhookConfigName      = "eob-mutate"
 	defaultDirectiveSelector      = "app.kubernetes.io/name=tawon-directive"
+	defaultCRDAPIGroup            = "tawon.mantisnet.com"
+	defaultFieldManager           = "eob-mcp"
 )
 
 // Config is the in-process runtime configuration. All identity fields are
@@ -54,6 +56,24 @@ type Config struct {
 	// canonical app.kubernetes.io/name label the operator stamps on its
 	// agent pods. Format: standard Kubernetes label selector.
 	DirectiveLabelSelector string
+
+	// CRDAPIGroup is the default Kubernetes API group used by the generic
+	// resource_* tools when the caller doesn't specify one. Default:
+	// "tawon.mantisnet.com" so EoB CRDs are addressable by Kind alone.
+	// Callers can always override per-call.
+	CRDAPIGroup string
+
+	// FieldManager is the field-manager identity used in Server-Side Apply
+	// operations (resource_apply). Conflicts with other managers will be
+	// reported with this name. Default: "eob-mcp".
+	FieldManager string
+
+	// NATSURL is the JetStream endpoint used by the Stream* RPCs. Empty
+	// disables the data plane (Stream* RPCs return a configuration
+	// error). Typical in-cluster value:
+	//
+	//   nats://tawon-streamstore.tawon-operator.svc.cluster.local:4222
+	NATSURL string
 }
 
 // FromEnv loads config from environment variables. Identity fields default
@@ -71,6 +91,9 @@ type Config struct {
 //	EOB_OPERATOR_DEPLOYMENT  (default: "tawon-operator-controller-manager")
 //	EOB_WEBHOOK_CONFIG       (default: "eob-mutate")
 //	EOB_DIRECTIVE_SELECTOR   (default: "app.kubernetes.io/name=tawon-directive")
+//	EOB_CRD_API_GROUP        (default: "tawon.mantisnet.com")
+//	EOB_FIELD_MANAGER        (default: "eob-mcp")
+//	EOB_NATS_URL             (default: empty; Stream* RPCs disabled if unset)
 func FromEnv(mcpVersion string) *Config {
 	return &Config{
 		SiteID:                 os.Getenv("EOB_SITE_ID"),
@@ -82,6 +105,9 @@ func FromEnv(mcpVersion string) *Config {
 		OperatorDeploymentName: envOrDefault("EOB_OPERATOR_DEPLOYMENT", defaultOperatorDeploymentName),
 		WebhookConfigName:      envOrDefault("EOB_WEBHOOK_CONFIG", defaultWebhookConfigName),
 		DirectiveLabelSelector: envOrDefault("EOB_DIRECTIVE_SELECTOR", defaultDirectiveSelector),
+		CRDAPIGroup:            envOrDefault("EOB_CRD_API_GROUP", defaultCRDAPIGroup),
+		FieldManager:           envOrDefault("EOB_FIELD_MANAGER", defaultFieldManager),
+		NATSURL:                os.Getenv("EOB_NATS_URL"),
 	}
 }
 

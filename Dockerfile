@@ -46,7 +46,8 @@ FROM gcr.io/distroless/static-debian12:${DISTROLESS_TAG}
 
 COPY --from=build /out/eob-mcp /eob-mcp
 
-# 8443: MCP HTTP+SSE (TLS-terminated by Service / sidecar)
-EXPOSE 8443
+# 8443: MCP HTTP/JSON-RPC
+# 9443: gRPC (typed federation surface; reflection enabled)
+EXPOSE 8443 9443
 
 ENTRYPOINT ["/eob-mcp"]
