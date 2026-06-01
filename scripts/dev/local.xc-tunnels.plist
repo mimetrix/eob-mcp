@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~/Library/LaunchAgents/local.xc-tunnels.plist
+  Auto-starts xc-tunnels.sh at login and respawns it if ssh ever drops.
+
+  EDIT the ProgramArguments path below to match your Mac username before
+  loading: launchd does NOT expand $HOME or ~ in plist values.
+
+  Install:
+    cp scripts/dev/local.xc-tunnels.plist ~/Library/LaunchAgents/
+    # then edit the path in the file you just copied
+    launchctl unload ~/Library/LaunchAgents/local.xc-tunnels.plist 2>/dev/null
+    launchctl load   ~/Library/LaunchAgents/local.xc-tunnels.plist
+
+  Verify:
+    launchctl list | grep xc-tunnels        # expect: PID  0  local.xc-tunnels
+    curl -s http://localhost:18443/healthz  # expect: ok
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>local.xc-tunnels</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/e.starin/bin/xc-tunnels.sh</string>
+  </array>
+
+  <!-- Start at login; respawn if the ssh ever drops. -->
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+
+  <!-- 5s throttle so we don't tight-loop if the network is unreachable. -->
+  <key>ThrottleInterval</key><integer>5</integer>
+
+  <!-- Capture stderr for "why did the tunnel drop?" forensics. -->
+  <key>StandardOutPath</key><string>/tmp/xc-tunnels.log</string>
+  <key>StandardErrorPath</key><string>/tmp/xc-tunnels.err</string>
+</dict>
+</plist>
