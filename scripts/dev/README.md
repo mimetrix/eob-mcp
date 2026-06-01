@@ -13,7 +13,7 @@ your Mac at all times:
 ```
 localhost:18443  →  eob-mcp HTTP/MCP    (Service ClusterIP 10.3.1.11:8443)
 localhost:19443  →  eob-mcp gRPC        (Service ClusterIP 10.3.1.11:9443)
-localhost:18789  →  tawon-dashboard     (master-0 hostIP  172.31.44.247:8789)
+localhost:8789  →  tawon-dashboard     (master-0 hostIP  172.31.44.247:8789)
 ```
 
 ### Why the dashboard target is `hostIP`, not the Service ClusterIP
@@ -56,7 +56,7 @@ curl -s http://localhost:18443/healthz
 grpcurl -plaintext localhost:19443 list
 # expect: eob.v1.EoBService + reflection services
 
-curl -s -o /dev/null -w "%{http_code}\n" http://localhost:18789/
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8789/
 # expect: 200
 ```
 
