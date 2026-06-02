@@ -210,6 +210,10 @@ Identity env vars (surface in `cluster_identity` output):
 
 ```
 EOB_SITE_ID, EOB_TENANT, EOB_REGION
+  auto-detected from /etc/resolv.conf on F5 XC CE sites
+  (`<site>.<tenant>.tenant.local` + `<region>.compute.internal`).
+  Set explicitly to override discovery or run off-XC.
+
 EOB_OPERATOR_NAMESPACE       (default: operators)
 EOB_TAWON_NAMESPACE          (default: tawon-operator)
 EOB_OPERATOR_DEPLOYMENT_NAME (default: tawon-operator-controller-manager)
@@ -217,6 +221,12 @@ EOB_WEBHOOK_CONFIG_NAME      (default: eob-mutate)
 EOB_DIRECTIVE_LABEL_SELECTOR (default: app.kubernetes.io/name=tawon-directive)
 EOB_CRD_API_GROUP            (default: tawon.mantisnet.com)
 EOB_FIELD_MANAGER            (default: eob-mcp)
+
+EOB_NATS_URL
+  when unset, the server discovers the chart-rendered Tawon
+  streamstore Service by label (`app=tawon-streamstore`) in
+  EOB_TAWON_NAMESPACE and uses `nats://<svc>.<ns>.svc:4222`.
+  Set explicitly only to point at an externally-managed NATS.
 ```
 
 TLS flag validation: both `-tls-cert` and `-tls-key` must be set together;

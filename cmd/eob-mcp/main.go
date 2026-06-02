@@ -92,6 +92,11 @@ func main() {
 
 func run(httpListen, grpcListen string, tlsCfg tlsOpts, logger *slog.Logger) error {
 	cfg := config.FromEnv(version)
+	logger.Info("identity resolved",
+		"site_id", cfg.SiteID,
+		"tenant", cfg.Tenant,
+		"region", cfg.Region,
+	)
 
 	// k8s wiring is best-effort at startup: a missing cluster (local dev,
 	// container without a ServiceAccount) should not prevent the server
@@ -215,6 +220,26 @@ func buildService(cfg *config.Config, kube *k8s.Client, logger *slog.Logger) (*s
 		slog.Info("dynamic client built")
 	}
 
+	// NATS endpoint resolution: explicit env wins; otherwise discover the
+	// chart-rendered streamstore Service via label so we don't bake the
+	// chart's per-install hex suffix into the deploy manifest.
+	if cfg.NATSURL == "" && kube != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		discovered, derr := kube.DiscoverStreamStoreURL(ctx, cfg.TawonNamespace)
+		cancel()
+		switch {
+		case derr != nil:
+			logger.Warn("streamstore Service discovery failed; Stream* RPCs disabled",
+				"err", derr, "ns", cfg.TawonNamespace)
+		case discovered == "":
+			logger.Info("no streamstore Service found; Stream* RPCs disabled",
+				"ns", cfg.TawonNamespace)
+		default:
+			cfg.NATSURL = discovered
+			logger.Info("discovered streamstore Service", "url", cfg.NATSURL)
+		}
+	}
+
 	var streamsReader streams.Reader
 	closer := func() {}
 	if cfg.NATSURL != "" {
@@ -228,8 +253,8 @@ func buildService(cfg *config.Config, kube *k8s.Client, logger *slog.Logger) (*s
 			b.haveStreams = true
 			logger.Info("streams backend connected", "url", cfg.NATSURL)
 		}
-	} else {
-		logger.Info("EOB_NATS_URL unset; Stream* RPCs disabled")
+	} else if kube == nil {
+		logger.Info("EOB_NATS_URL unset and no kube client for discovery; Stream* RPCs disabled")
 	}
 
 	return service.New(cfg, kc, dyn, streamsReader), b, closer, nil

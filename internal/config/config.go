@@ -77,15 +77,17 @@ type Config struct {
 }
 
 // FromEnv loads config from environment variables. Identity fields default
-// to empty string; namespace and resource-name fields default to the EoB
-// conventions and are only worth overriding when a downstream chart
-// renames things.
+// to empty string and are then back-filled from /etc/resolv.conf when
+// the pod runs on an F5 XC site that publishes the canonical
+// search-domain pattern. Explicit env values always win over discovery.
+// Namespace and resource-name fields default to the EoB conventions and
+// are only worth overriding when a downstream chart renames things.
 //
 // Environment variables read:
 //
-//	EOB_SITE_ID
-//	EOB_TENANT
-//	EOB_REGION
+//	EOB_SITE_ID              (auto-discover from resolv.conf on F5 XC)
+//	EOB_TENANT               (auto-discover from resolv.conf on F5 XC)
+//	EOB_REGION               (auto-discover from resolv.conf on AWS)
 //	EOB_OPERATOR_NAMESPACE   (default: "operators")
 //	EOB_TAWON_NAMESPACE      (default: "tawon-operator")
 //	EOB_OPERATOR_DEPLOYMENT  (default: "tawon-operator-controller-manager")
@@ -93,12 +95,28 @@ type Config struct {
 //	EOB_DIRECTIVE_SELECTOR   (default: "app.kubernetes.io/name=tawon-directive")
 //	EOB_CRD_API_GROUP        (default: "tawon.mantisnet.com")
 //	EOB_FIELD_MANAGER        (default: "eob-mcp")
-//	EOB_NATS_URL             (default: empty; Stream* RPCs disabled if unset)
+//	EOB_NATS_URL             (default: empty; falls back to streamstore
+//	                          Service discovery via the kube client)
 func FromEnv(mcpVersion string) *Config {
+	site := os.Getenv("EOB_SITE_ID")
+	tenant := os.Getenv("EOB_TENANT")
+	region := os.Getenv("EOB_REGION")
+	if site == "" || tenant == "" || region == "" {
+		ds, dt, dr := discoverFromResolvConf()
+		if site == "" {
+			site = ds
+		}
+		if tenant == "" {
+			tenant = dt
+		}
+		if region == "" {
+			region = dr
+		}
+	}
 	return &Config{
-		SiteID:                 os.Getenv("EOB_SITE_ID"),
-		Tenant:                 os.Getenv("EOB_TENANT"),
-		Region:                 os.Getenv("EOB_REGION"),
+		SiteID:                 site,
+		Tenant:                 tenant,
+		Region:                 region,
 		MCPVersion:             mcpVersion,
 		OperatorNamespace:      envOrDefault("EOB_OPERATOR_NAMESPACE", defaultOperatorNamespace),
 		TawonNamespace:         envOrDefault("EOB_TAWON_NAMESPACE", defaultTawonNamespace),

@@ -159,28 +159,34 @@ spec:
               containerPort: 19443
               protocol: TCP
           env:
-            # Identity values surface in cluster_identity output. Set
-            # these to the values the fleet console should display.
-            - name: EOB_SITE_ID
-              value: "srikan-tf-test-0"        # EDIT ME (XC site name)
-            - name: EOB_TENANT
-              value: "platform-svc-nbryikfr"   # EDIT ME (XC tenant id)
-            - name: EOB_REGION
-              value: "us-east-2"               # EDIT ME (XC region)
+            # Identity values surface in cluster_identity output.
+            # When unset, the server back-fills site / tenant / region by
+            # parsing /etc/resolv.conf (the F5 XC CE platform publishes
+            # the canonical `<site>.<tenant>.tenant.local` and
+            # `<region>.compute.internal` search-domain pattern). Set any
+            # of these explicitly to override discovery — useful only for
+            # presentation overrides or non-XC deployments.
+            # - name: EOB_SITE_ID
+            #   value: ""
+            # - name: EOB_TENANT
+            #   value: ""
+            # - name: EOB_REGION
+            #   value: ""
             # Namespace overrides; defaults match the EoB chart so these
             # are only needed if a deployment renames the namespaces.
             # - name: EOB_OPERATOR_NAMESPACE
             #   value: "operators"
             # - name: EOB_TAWON_NAMESPACE
             #   value: "tawon-operator"
-            # Data-plane NATS endpoint. When set, Stream* RPCs come
-            # online. When unset, Stream* RPCs are not registered and
-            # the server logs "EOB_NATS_URL unset; Stream* RPCs disabled".
-            # The Tawon chart names this Service with a chart-generated
-            # suffix; verify against `kubectl -n tawon-operator get svc`
-            # before applying.
-            - name: EOB_NATS_URL
-              value: "nats://tawon-streamstore-d2f18e.tawon-operator.svc:4222"
+            # Data-plane NATS endpoint. When unset, the server discovers
+            # the Tawon JetStream Service by label
+            # (`app=tawon-streamstore`) in EOB_TAWON_NAMESPACE at startup
+            # and uses that as the JetStream endpoint. If no matching
+            # Service is found, Stream* RPCs are not registered. Set
+            # EOB_NATS_URL explicitly only when pointing at an
+            # externally-managed NATS server.
+            # - name: EOB_NATS_URL
+            #   value: "nats://external-nats.example:4222"
           readinessProbe:
             httpGet:
               path: /readyz

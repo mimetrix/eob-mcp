@@ -1,5 +1,22 @@
 # eob-mcp TODO
 
+## Phase 1j — auto-discover NATS + site identity (DONE 2026-06-02)
+
+Two install-time fragilities retired:
+
+- `EOB_NATS_URL`-unset now triggers in-cluster Service discovery by
+  label (`app=tawon-streamstore`) in `EOB_TAWON_NAMESPACE`, with a
+  name-pattern fallback. The deploy manifest no longer bakes in the
+  chart's per-install hex suffix.
+- `EOB_SITE_ID` / `EOB_TENANT` / `EOB_REGION` back-fill from
+  `/etc/resolv.conf` on F5 XC sites using the canonical
+  `<site>.<tenant>.tenant.local` + `<region>.compute.internal`
+  search-domain pattern. Explicit env still wins.
+
+Both: env values continue to take precedence when set, so existing
+deploys keep working unchanged. The bare `EDIT ME` env entries in
+`deploy/k8s/eob-mcp.yaml` are removed.
+
 ## Phase 1d — proto-first dual mode (DONE)
 
 Shipped 2026-05-30. The seven existing tools were migrated end-to-end
