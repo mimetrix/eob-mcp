@@ -61,6 +61,10 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["list"]
+  # Streamstore Service auto-discovery (when EOB_NATS_URL is unset).
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["list"]
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["mutatingwebhookconfigurations"]
     verbs: ["get"]
