@@ -1,9 +1,38 @@
 # `scripts/dev/` — local-developer-only helpers
 
-These are Mac-side scripts for reaching the in-cluster eob-mcp Service
-and the tawon-dashboard from `localhost`. They are not deployed,
-imported, or referenced by any production code. Safe to ignore unless
-you're developing against a remote XC site.
+Scripts for reaching the in-cluster eob-mcp Service and the
+tawon-dashboard from `localhost`. They are not deployed, imported, or
+referenced by any production code. Safe to ignore unless you're
+developing against a remote XC site.
+
+Two flavors:
+
+- **`xc-tunnels.sh` + `local.xc-tunnels.plist`** — Mac, launchd-supervised,
+  always-on. Pin and forget.
+- **`tunnel.sh`** — portable (Linux, BSD, Mac), no launchd dependency,
+  `up`/`down`/`status`/`logs` subcommands. Uses `autossh` if installed,
+  falls back to plain `ssh`. Suited for dev containers, Linux laptops,
+  or any context where you want explicit lifecycle control.
+
+Both forward the same three local ports (18443, 19443, 8789); they
+share configuration, so pick one — not both at the same time.
+
+## `tunnel.sh` (portable)
+
+```bash
+./scripts/dev/tunnel.sh up         # foreground; Ctrl-C to stop
+./scripts/dev/tunnel.sh up -d      # background daemon
+./scripts/dev/tunnel.sh status     # check state + show ss listeners
+./scripts/dev/tunnel.sh down       # stop daemon
+./scripts/dev/tunnel.sh logs       # tail -F the daemon log
+```
+
+Override defaults via env vars (`REMOTE_HOST`, `SSH_KEY`, `MCP_SVC`,
+`GRPC_SVC`, `DASHBOARD_HOST`, `STATE_DIR`). See `tunnel.sh -h` for the
+full list and defaults.
+
+State files default to `$XDG_RUNTIME_DIR` (Linux) or `/tmp` otherwise:
+`eob-mcp-tunnel.pid` + `eob-mcp-tunnel.log`.
 
 ## `xc-tunnels.sh` + `local.xc-tunnels.plist`
 

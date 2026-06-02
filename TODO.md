@@ -1,5 +1,46 @@
 # eob-mcp TODO
 
+## Phase 1e — durable MCP connection (DONE 2026-06-02)
+
+Two flavors now ship under `scripts/dev/`:
+
+- `xc-tunnels.sh` + `local.xc-tunnels.plist` — Mac, launchd-supervised
+  (shipped earlier).
+- `tunnel.sh` — portable (Linux/BSD/Mac), no launchd dependency, with
+  `up`/`down`/`status`/`logs` subcommands. Uses `autossh` when present,
+  falls back to plain `ssh`. Smoke-tested end-to-end against
+  srikan-tf-test-0.
+
+Either is suitable for dev consumers. An Ingress-shaped path is the
+real answer for fleet consoles consuming many sites — not on the
+single-site repo's roadmap; the choice (cert-manager + Ingress, F5 XC
+HTTPLoadBalancer, or SPIFFE-fronted) is downstream.
+
+## Phase 1g — service-package RPC tests (DONE 2026-06-02)
+
+Originally framed as "tests for `resource_*`," which had already
+landed (six test files, 20+ tests). The remaining service-test gap
+was `ClusterIdentity` and `EoBHealth`, both at 0% coverage. Now:
+
+- `cluster_identity_test.go` — RPC happy path, no-kube degraded path,
+  operator-deployment-missing path, eob_version fallback chain
+  (version label → manager image → first-container image).
+- `eob_health_test.go` — happy/degraded/absent component statuses,
+  directives aggregation + sort, agents-per-node grouping including
+  the `<pending>` sentinel.
+
+`internal/service` coverage: 50% → 80.4%.
+
+## Phase 3 — data plane (DONE 2026-05-30; commit 1dd8042)
+
+Shipped before the auto-discovery work. The three RPCs (`StreamList`,
+`StreamStats`, `StreamRead`), the `streams.Reader` abstraction with a
+nats.go/jetstream implementation, and the `filter.Filter` gojq wrapper
+are all in `internal/streams/`, `internal/filter/`, and
+`internal/service/stream_*.go`. End-to-end test against embedded NATS
+in `stream_e2e_test.go`. The checklist in this file was never
+ticked off; see commit history for the actual shape.
+
 ## Phase 1j — auto-discover NATS + site identity (DONE 2026-06-02)
 
 Two install-time fragilities retired:
@@ -27,16 +68,6 @@ TLS hooks (off by default, mTLS-capable) and the gRPC Service port
 `README.md` for the configuration matrix and `FLEET.md` for how
 federation consumes the gRPC surface.
 
-## Phase 1e — durable MCP connection
-
-Validation tunnel is fragile (dies when the dev session ends).
-
-- [ ] Either expose `eob-mcp` Service via Ingress (TLS termination
-  somewhere) **or** ship a small `scripts/tunnel.sh` that establishes
-  an autossh-backed `localhost:18443 -> svc:8443` tunnel on demand for
-  Claude Code clients. The latter is fine for the dev loop; the
-  former is needed before any fleet console talks to multiple sites.
-
 ## Phase 1f — file the Claude Code `/mcp` bug
 
 `claude mcp add` modifies `~/.claude.json` successfully and `claude
@@ -54,19 +85,6 @@ stream RPCs (Phase 3 below). Decoding, aggregation, correlation,
 templating, and prose synthesis are explicit non-goals; see
 `docs/ARCHITECTURE.md` for the full statement. README, FLEET, and this
 file updated to match.
-
-## Phase 1g — per-RPC service tests for `resource_*`
-
-Today only `ClusterIdentity` and the `imageTag` helper have direct
-service-package tests. The five `resource_*` RPCs are exercised
-indirectly through the MCP wrappers in `internal/tools/`, which gives
-end-to-end coverage but no targeted unit coverage of the dynamic-client
-paths.
-
-- [ ] Add `internal/service/resource_*_test.go` files using
-  `k8s.io/client-go/dynamic/fake` to back `*k8s.DynClient`. Cover at
-  minimum: list with label selector, get NotFound mapping, apply
-  dry-run shape, delete idempotency, schema CRD-not-found.
 
 ## Phase 1h — cert provisioning for production TLS
 
@@ -90,28 +108,6 @@ certs land in the Pod.
 - [ ] Replace `readyz` stub with a real readiness check (kube
   reachability, optional NATS reachability) once Phase 3 lands and
   NATS becomes a hard dependency.
-
-## Phase 3 — data plane (narrow)
-
-Three RPCs, no more. Decoding/aggregation/correlation are out of
-scope; see `docs/ARCHITECTURE.md`.
-
-- [ ] Add `internal/streams/` with a `StreamReader` interface; concrete
-  impl wraps `nats.go`. ~150 LOC.
-- [ ] Add `internal/filter/` with a `Filter` interface; concrete impl
-  wraps `itchyny/gojq`. ~80 LOC. **Filter syntax is jq, full stop —
-  no invented expression language.**
-- [ ] Add three RPCs to `proto/eob/v1/service.proto`:
-  `StreamList`, `StreamStats`, `StreamRead`. Regenerate via `make proto`.
-- [ ] Implement on `*service.Server` in `internal/service/stream_*.go`,
-  each delegating to the backend interfaces above. Each method should
-  stay under ~50 LOC; if anything goes over, that's a scope-leak signal.
-- [ ] MCP wrappers in `internal/tools/stream.go` follow the existing
-  proto-marshal pattern; no new logic.
-- [ ] End-to-end test against an in-memory NATS server (`server.NewServer`
-  from `nats-server`) — proves the wiring without needing a real cluster.
-
-Total target: ~300 LOC across the package, plus tests.
 
 ## Phase 3-adjacent — `eob-decoder` sidecar (optional, separate repo)
 
