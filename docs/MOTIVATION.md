@@ -15,84 +15,136 @@ accounts below are the load-bearing answer.
 ## TL;DR
 
 Two named customers drive the investment, with complementary
-requirements that both map cleanly onto the same architecture:
+requirements that map cleanly onto the **two front doors** of the
+same canonical service:
 
-- **Verizon (VZW)** wants to **build their own internal control
-  plane** for EoB — provisioning, configuring, and managing the
-  observation stack from their own tooling, not from `kubectl` or
-  the Mantis chart. They need a **typed, programmatic API** that
-  can be driven from a Verizon-owned controller.
+- **Verizon (VZW)** is running an **internal AI effort** that drives
+  EoB through LLM agents — provisioning directives, investigating
+  anomalies, reasoning over the data plane. They need an
+  **LLM-native** interface, which is exactly what MCP is. This is
+  the load-bearing reason `eob-mcp` is an MCP server in the first
+  place, not just a gRPC API.
 - **AT&T (ATT)** wants to **operate many EoB instances across many
   clusters from one console**. Each EoB site is independent and
   cluster-isolated by design; ATT needs a **federation surface**
   that lets one aggregator UI talk to all of them and merge results
-  by site of origin.
+  by site of origin. That's a service-to-service workload, which is
+  exactly what gRPC is for.
 
-Without `eob-mcp`, both of these efforts would have to be built
-against `kubectl`, raw CRDs, and per-site NATS JetStream connections
-— viable for one site, painful for ten, unworkable for fifty.
+These two asks line up exactly with the two halves of the
+proto-first dual-mode design: **MCP for VZW's AI agents, gRPC for
+ATT's federation aggregator, one `service.Server` underneath
+both**. Neither customer pays the cost of the other's protocol; both
+get the same canonical contract.
+
+Without `eob-mcp`, both efforts would have to be built against
+`kubectl`, raw CRDs, and per-site NATS JetStream connections —
+viable for one site, painful for ten, unworkable for fifty.
 `eob-mcp` makes both customer paths into a single supported
-integration: one proto, two front doors, federation-native from the
-first response.
+integration.
 
 ---
 
-## Driving customer #1 — Verizon (build/integrate)
+## Driving customer #1 — Verizon (AI-driven ops)
 
 ### What VZW is doing
 
-Verizon is staffing an internal effort to make EoB a first-class
-piece of their network-observability infrastructure. The goal is
-not "use the Mantis dashboard"; the goal is **"drive EoB from a
-Verizon-built control plane that integrates with their existing
-operational systems."**
+Verizon is running an **internal AI effort** that uses LLM agents to
+investigate, configure, and reason about their EoB-equipped sites.
+The goal isn't "build a controller against an API"; it's "let our AI
+agents *use* EoB the same way an engineer would, with the same
+fluency, at agent speed."
 
 That means:
 
-- Verizon's tooling becomes the **client**, not the user.
-- The control plane provisions ClusterDirectives / Directives /
-  Streams across one or more EoB-equipped sites.
-- Operational state (directive readiness, agent health, stream
-  catalog) is consumed programmatically — not screen-scraped from
-  the dashboard.
-- Lifecycle operations (pause, restart, scheduled rollouts, dry-run
-  validation, rollback) are scripted against an API contract that
-  doesn't churn under them.
+- The **consumer is an LLM agent** — Claude, an internal Verizon
+  LLM stack, or both. The agent invokes tools, reads results,
+  reasons over data, decides what to do next.
+- Workflows are **conversational and exploratory**, not
+  pre-programmed. "Why is DNS slow at site X?" or "give me a
+  capture of HTTP traffic from pods labeled `app=billing` for the
+  next ten minutes" are the actual shapes — not scripted CD
+  pipelines.
+- The agent provisions / inspects / pauses / restarts
+  ClusterDirectives the same way a human operator would — only it
+  does it in milliseconds, can fan out across hundreds of pods,
+  and can do it inside the loop of an ongoing investigation.
+- Operations data (stream contents, directive status, k8s events)
+  flows back into the agent's context for further reasoning — it
+  is **not** for a controller to consume and store.
+
+### Why MCP specifically (not "any API")
+
+MCP is the right protocol for this consumer class for reasons
+that don't apply to a controller-driven design:
+
+- **Tool-use is a first-class protocol primitive.** MCP standardizes
+  how an LLM discovers tools, learns their schemas, calls them with
+  validated arguments, and consumes structured results. Building
+  that against an arbitrary gRPC or REST API would force Verizon to
+  build (and maintain) their own LLM-to-API adapter for every tool.
+- **The major LLM clients already speak it.** Claude Code, Claude
+  Desktop, Cursor, the Anthropic API's MCP support, and a growing
+  ecosystem of agent frameworks all consume MCP servers directly.
+  Verizon's internal effort plugs into the same surface without
+  bespoke glue.
+- **Schemas are LLM-shaped, not service-shaped.** MCP tool
+  descriptions are human-language strings written for an LLM to
+  reason about — "List Kubernetes resources of a given Kind" is the
+  description, not just a method signature. The schema *is* the
+  prompt for the LLM, and we own it.
+- **Server-side gating.** When a backend isn't reachable (no kube
+  client, no NATS), we register only the tools that work — the LLM
+  never sees a tool that will only return errors. Argument
+  validation lives at the tool boundary, not in the prompt.
+- **Same canonical contract as the gRPC surface.** Every MCP tool
+  delegates to the same `service.Server` method ATT's aggregator
+  hits over gRPC. Verizon's AI agents and ATT's console see the
+  same source of truth — they just translate it for different
+  consumers.
 
 ### What this needs from `eob-mcp`
 
-- **A typed contract**, not a YAML/kubectl interface. Verizon's
-  controller needs a proto/schema it can codegen clients against,
-  with documented field semantics that don't shift between Tawon
-  chart revisions. → `proto/eob/v1/service.proto`
-- **Programmatic CRUD on every Tawon CRD**, with status surfacing
-  and dry-run support. → `ResourceList` / `ResourceGet` /
-  `ResourceApply` (with `dry_run`/`force`) / `ResourceDelete` /
-  `ResourceSchema`.
-- **Batched operations** so a Verizon rollout doesn't pay N × RTT
-  per site for N directives. → `BatchApply` with per-item
-  independent results.
-- **Live state without polling.** Once provisioned, the controller
-  needs to know when a directive transitions Ready→Stopped, or when
-  an agent pod crashes, or when a Stream condition flips, **as it
-  happens**. → `WatchResources` + `EventStream`.
-- **Audit trail.** Every apply / delete the Verizon controller
-  issued is observable on the same EventStream the controller is
-  already consuming. → audit events published from
-  `ResourceApply` / `ResourceDelete` / `BatchApply` into the
-  in-process audit broker.
+- **An LLM-native tool surface** with the seven Tawon CRDs reachable
+  via generic CRUD, structured stream tools, and human-readable
+  descriptions. → `cluster_identity` / `eob_health` / `resource_*`
+  / `stream_*` MCP tools.
+- **Output shapes an LLM can reason about** — structured JSON, slim
+  summaries on list, full unstructured objects on get, jq-filtered
+  envelopes on stream read. No protobuf to parse, no base64 the
+  LLM has to babysit, no opinionated aggregations. → tools
+  wrappers in `internal/tools/`.
+- **Tool-level conditional registration** so the LLM only sees what
+  this server can actually do today. → `serviceBackends`
+  registration in `cmd/eob-mcp/main.go`.
+- **Federation envelope on every response** so an agent operating
+  across sites can route its reasoning correctly. → `ClusterRef`.
+- **Same lifecycle primitives operators use** (apply / get / list /
+  delete / pause / restart via the `startAt`/`stopAt` recipe) so an
+  agent's "investigate then act" loop doesn't need any new
+  primitives the human operator wouldn't have. → existing
+  `resource_*` tools.
 
 ### What VZW gets back from this design
 
-A single gRPC endpoint per EoB site that:
+A single MCP endpoint per EoB site that:
 
-1. Speaks Verizon's preferred IPC (gRPC with proto).
-2. Has predictable identity on every response (`ClusterRef`).
-3. Survives Tawon chart changes — the proto is owned by us, not by
-   the upstream chart, and the underlying CRD lookups are dynamic
-   so a CRD field rename in Tawon does not break the API contract.
-4. Doesn't make Verizon learn or operate the MCP protocol — the
-   gRPC surface stands on its own.
+1. Plugs into Claude / their internal LLM stack / any MCP-aware
+   agent framework with **zero custom adapter code**.
+2. Exposes the same canonical contract their human operators
+   already use — agent + human reach for the same primitives.
+3. Surfaces tool failures as structured errors the LLM can reason
+   about and recover from (e.g. "this kind doesn't exist" → ask the
+   user to clarify), not as opaque protocol-level errors.
+4. Survives Tawon chart changes — the MCP tool surface is owned
+   by us; the underlying CRD lookups are dynamic so a CRD field
+   rename in Tawon does not break the agent contract.
+
+The AI effort is the load-bearing reason `eob-mcp` is an MCP server
+in the first place. A controller-driven Verizon would have asked
+for "gRPC, please" and been served by the same architecture; an
+AI-agent-driven Verizon asked for "MCP, please" and got it on the
+same code path.
 
 ---
 
@@ -160,17 +212,24 @@ A single gRPC client implementation, repeated across N sites, that:
 Without this service, both customers above would have to build
 against the surfaces that ship today with the Tawon stack:
 
-- **`kubectl` + raw CRDs**: works for one site, makes a Verizon
-  controller into a kubectl-shaped wrapper, doesn't help ATT
-  federate across sites.
+- **`kubectl` + raw CRDs**: works for one site. For VZW's AI effort
+  it means giving the LLM `kubectl exec` privileges — operationally
+  unacceptable and not the right cognitive surface for an agent.
+  For ATT it doesn't help federate across sites.
 - **The Mantis dashboard**: human-only, single-site, not
-  programmable.
+  programmable. Neither an LLM agent nor a federation aggregator
+  can drive it.
 - **Direct NATS JetStream connections**: works for the data plane
   but requires every consumer to know the per-site streamstore
   Service name, hostAliases workarounds, cluster.local quirks (see
   [`UPSTREAM-FIXES.md`](../../eob-xc-install/UPSTREAM-FIXES.md)
-  for the laundry list). Effectively makes every consumer a
-  platform integrator.
+  for the laundry list). Effectively makes every consumer — agent
+  or aggregator — a platform integrator.
+- **A bespoke "LLM-to-CRD adapter" Verizon could build themselves**:
+  technically possible, structurally wrong. Every customer who
+  wants to AI-augment their EoB ops would have to build and
+  maintain their own version. MCP exists to remove exactly this
+  kind of per-customer adapter from the equation.
 - **Helm**: install-time only. Not a runtime control plane.
 
 None of those compose at fleet scale. None give you a federation
@@ -191,11 +250,12 @@ For the curious reader who hasn't seen
 design decisions are:
 
 1. **Proto-first dual-mode.** One `service.proto` is the canonical
-   contract. Two front doors translate: MCP (for LLM agents and the
-   Inspector) and gRPC (for the customer-built controllers and
-   aggregators above). Both delegate to the same in-process
-   `service.Server`. New RPCs are added to the proto first; the
-   front doors are thin and uniform.
+   contract. Two front doors translate it for two consumer classes:
+   **MCP for LLM-agent consumers (VZW's AI effort, the Inspector,
+   any agent framework)** and **gRPC for service-to-service
+   consumers (ATT's aggregator, future federation clients)**. Both
+   delegate to the same in-process `service.Server`. New RPCs are
+   added to the proto first; the front doors stay thin and uniform.
 2. **Federation envelope on every response.** `ClusterRef` ships
    `site_id` / `tenant` / `region` on every unary response and every
    streaming message. An aggregator never has to ask "which site
@@ -215,20 +275,29 @@ design decisions are:
 
 ### VZW recipe
 
-A Verizon-internal controller looks roughly like this:
+A Verizon AI agent looks roughly like this:
 
 ```
-[VZW controller] ──gRPC──► eob-mcp:9443 (per EoB site)
-       │
-       ├── ResourceApply / BatchApply   (provision directives)
-       ├── ResourceGet / ResourceList   (inspect state)
-       ├── WatchResources               (react to status changes)
-       ├── EventStream                  (audit + k8s events)
-       └── ResourceSchema               (catalog of available CRDs)
+[VZW AI agent]
+   │  (Claude / internal LLM stack / agent framework)
+   │
+   │  MCP tool calls over HTTP/JSON-RPC
+   ▼
+eob-mcp:8443 (per EoB site)
+   │
+   ├── cluster_identity              ("which site am I on?")
+   ├── eob_health                    ("is the stack healthy?")
+   ├── resource_list / resource_get  ("what directives exist?")
+   ├── resource_apply / _delete      (provision / pause / restart)
+   ├── resource_schema               (discover CRD shape on the fly)
+   └── stream_list / _stats / _read  (read the data plane, with jq filters)
 ```
 
-No MCP involved. No Tawon-chart-version knowledge required. The
-controller speaks our proto; we handle the rest.
+No bespoke LLM-to-API adapter. No proto codegen. The agent picks up
+the tool catalog from the MCP server itself — descriptions,
+argument schemas, output shapes — and reasons about what to do
+next. Same `service.Server` under the hood that ATT's gRPC
+aggregator hits.
 
 ### ATT recipe
 
@@ -286,14 +355,17 @@ around it (MCP, gRPC, eventually whatever comes next) evolve.
 Open work tracked in [`TODO.md`](../TODO.md), ordered by which
 customer ask it unblocks:
 
-| Item | VZW | ATT | Notes |
+| Item | VZW (AI agents) | ATT (federation) | Notes |
 |---|---|---|---|
-| **Phase 1h — cert provisioning** | needed | needed | mTLS hooks done; cert pipeline is the blocker. Becomes structural once ATT runs 10+ sites. |
-| **Per-call authz / actor extraction** | needed | needed | Audit events have an `actor` field; today empty. mTLS subject → actor is the obvious next step. |
+| **Phase 1h — cert provisioning** | needed | needed | mTLS hooks done; cert pipeline is the blocker. Becomes structural once ATT runs 10+ sites and when VZW's agents reach beyond a single site. |
+| **Per-call authz / actor extraction** | needed | needed | Audit events have an `actor` field; today empty. mTLS subject → actor is the obvious next step. For VZW it answers "which AI agent did what." |
+| **Phase 1e — durable MCP connection** | **needed** | low | Tunnel / Ingress for the MCP endpoint matters most for the AI-agent consumer. ATT's aggregator goes gRPC. |
+| **Phase 1f — claude-code `/mcp` bug** | medium | nil | Affects the LLM-side dev loop directly. VZW's agents may hit the same. |
+| **Resource templates + `resources/list` MCP surface** | medium | nil | Makes CRs and streams browseable as URIs without a tool call — good for LLM discoverability. MCP-only. |
+| **MCP subscriptions / live-tail tool** | medium | nil | Live data on the MCP side; mirrors the gRPC `TailStream` for the agent consumer. |
 | **Pagination cursors** | low | needed | ATT's aggregator paging across many sites needs resumable reads. |
 | **Capability negotiation RPC** | low | needed | Graceful degradation across version skew in a multi-site fleet. |
 | **Logging-handler → ErrorCount24h** | low | medium | Heartbeat's `error_count_24h` is currently always 0. Wire to the slog handler. |
-| **Phase 1f — claude-code `/mcp` bug** | nil | nil | Affects LLM-side dev loop only. Already filed-ready. |
 
 ---
 
