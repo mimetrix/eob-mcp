@@ -29,6 +29,11 @@ const (
 	EoBService_StreamList_FullMethodName      = "/eob.v1.EoBService/StreamList"
 	EoBService_StreamStats_FullMethodName     = "/eob.v1.EoBService/StreamStats"
 	EoBService_StreamRead_FullMethodName      = "/eob.v1.EoBService/StreamRead"
+	EoBService_Heartbeat_FullMethodName       = "/eob.v1.EoBService/Heartbeat"
+	EoBService_BatchApply_FullMethodName      = "/eob.v1.EoBService/BatchApply"
+	EoBService_WatchResources_FullMethodName  = "/eob.v1.EoBService/WatchResources"
+	EoBService_EventStream_FullMethodName     = "/eob.v1.EoBService/EventStream"
+	EoBService_TailStream_FullMethodName      = "/eob.v1.EoBService/TailStream"
 )
 
 // EoBServiceClient is the client API for EoBService service.
@@ -57,6 +62,23 @@ type EoBServiceClient interface {
 	StreamList(ctx context.Context, in *StreamListRequest, opts ...grpc.CallOption) (*StreamListResponse, error)
 	StreamStats(ctx context.Context, in *StreamStatsRequest, opts ...grpc.CallOption) (*StreamStatsResponse, error)
 	StreamRead(ctx context.Context, in *StreamReadRequest, opts ...grpc.CallOption) (*StreamReadResponse, error)
+	// Heartbeat is the cheap-polling liveness endpoint. Aggregator calls
+	// this every 30s against every site; richer RPCs only fire when
+	// heartbeat reports something off.
+	Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
+	// BatchApply applies many manifests in one call. Per-item independent:
+	// one failure does not abort the rest. Returns per-item status.
+	BatchApply(ctx context.Context, in *BatchApplyRequest, opts ...grpc.CallOption) (*BatchApplyResponse, error)
+	// WatchResources streams kubernetes-watch-shaped events for a Kind so
+	// the aggregator does not poll. Closes on client cancel.
+	WatchResources(ctx context.Context, in *WatchResourcesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[WatchResourcesResponse], error)
+	// EventStream surfaces k8s Events + eob-mcp's own audit events as
+	// they happen. Includes resource_apply / resource_delete that the
+	// aggregator itself issued (closes the loop on what the fleet did).
+	EventStream(ctx context.Context, in *EventStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[EventStreamResponse], error)
+	// TailStream is the live-tail companion to StreamRead. Same envelope
+	// shape; pushed as messages arrive in JetStream rather than paged.
+	TailStream(ctx context.Context, in *TailStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TailStreamResponse], error)
 }
 
 type eoBServiceClient struct {
@@ -167,6 +189,83 @@ func (c *eoBServiceClient) StreamRead(ctx context.Context, in *StreamReadRequest
 	return out, nil
 }
 
+func (c *eoBServiceClient) Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(HeartbeatResponse)
+	err := c.cc.Invoke(ctx, EoBService_Heartbeat_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eoBServiceClient) BatchApply(ctx context.Context, in *BatchApplyRequest, opts ...grpc.CallOption) (*BatchApplyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchApplyResponse)
+	err := c.cc.Invoke(ctx, EoBService_BatchApply_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eoBServiceClient) WatchResources(ctx context.Context, in *WatchResourcesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[WatchResourcesResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &EoBService_ServiceDesc.Streams[0], EoBService_WatchResources_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[WatchResourcesRequest, WatchResourcesResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type EoBService_WatchResourcesClient = grpc.ServerStreamingClient[WatchResourcesResponse]
+
+func (c *eoBServiceClient) EventStream(ctx context.Context, in *EventStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[EventStreamResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &EoBService_ServiceDesc.Streams[1], EoBService_EventStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[EventStreamRequest, EventStreamResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type EoBService_EventStreamClient = grpc.ServerStreamingClient[EventStreamResponse]
+
+func (c *eoBServiceClient) TailStream(ctx context.Context, in *TailStreamRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TailStreamResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &EoBService_ServiceDesc.Streams[2], EoBService_TailStream_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[TailStreamRequest, TailStreamResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type EoBService_TailStreamClient = grpc.ServerStreamingClient[TailStreamResponse]
+
 // EoBServiceServer is the server API for EoBService service.
 // All implementations must embed UnimplementedEoBServiceServer
 // for forward compatibility.
@@ -193,6 +292,23 @@ type EoBServiceServer interface {
 	StreamList(context.Context, *StreamListRequest) (*StreamListResponse, error)
 	StreamStats(context.Context, *StreamStatsRequest) (*StreamStatsResponse, error)
 	StreamRead(context.Context, *StreamReadRequest) (*StreamReadResponse, error)
+	// Heartbeat is the cheap-polling liveness endpoint. Aggregator calls
+	// this every 30s against every site; richer RPCs only fire when
+	// heartbeat reports something off.
+	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
+	// BatchApply applies many manifests in one call. Per-item independent:
+	// one failure does not abort the rest. Returns per-item status.
+	BatchApply(context.Context, *BatchApplyRequest) (*BatchApplyResponse, error)
+	// WatchResources streams kubernetes-watch-shaped events for a Kind so
+	// the aggregator does not poll. Closes on client cancel.
+	WatchResources(*WatchResourcesRequest, grpc.ServerStreamingServer[WatchResourcesResponse]) error
+	// EventStream surfaces k8s Events + eob-mcp's own audit events as
+	// they happen. Includes resource_apply / resource_delete that the
+	// aggregator itself issued (closes the loop on what the fleet did).
+	EventStream(*EventStreamRequest, grpc.ServerStreamingServer[EventStreamResponse]) error
+	// TailStream is the live-tail companion to StreamRead. Same envelope
+	// shape; pushed as messages arrive in JetStream rather than paged.
+	TailStream(*TailStreamRequest, grpc.ServerStreamingServer[TailStreamResponse]) error
 	mustEmbedUnimplementedEoBServiceServer()
 }
 
@@ -232,6 +348,21 @@ func (UnimplementedEoBServiceServer) StreamStats(context.Context, *StreamStatsRe
 }
 func (UnimplementedEoBServiceServer) StreamRead(context.Context, *StreamReadRequest) (*StreamReadResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StreamRead not implemented")
+}
+func (UnimplementedEoBServiceServer) Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Heartbeat not implemented")
+}
+func (UnimplementedEoBServiceServer) BatchApply(context.Context, *BatchApplyRequest) (*BatchApplyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchApply not implemented")
+}
+func (UnimplementedEoBServiceServer) WatchResources(*WatchResourcesRequest, grpc.ServerStreamingServer[WatchResourcesResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method WatchResources not implemented")
+}
+func (UnimplementedEoBServiceServer) EventStream(*EventStreamRequest, grpc.ServerStreamingServer[EventStreamResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method EventStream not implemented")
+}
+func (UnimplementedEoBServiceServer) TailStream(*TailStreamRequest, grpc.ServerStreamingServer[TailStreamResponse]) error {
+	return status.Errorf(codes.Unimplemented, "method TailStream not implemented")
 }
 func (UnimplementedEoBServiceServer) mustEmbedUnimplementedEoBServiceServer() {}
 func (UnimplementedEoBServiceServer) testEmbeddedByValue()                    {}
@@ -434,6 +565,75 @@ func _EoBService_StreamRead_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _EoBService_Heartbeat_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HeartbeatRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EoBServiceServer).Heartbeat(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EoBService_Heartbeat_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EoBServiceServer).Heartbeat(ctx, req.(*HeartbeatRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EoBService_BatchApply_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchApplyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EoBServiceServer).BatchApply(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EoBService_BatchApply_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EoBServiceServer).BatchApply(ctx, req.(*BatchApplyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EoBService_WatchResources_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(WatchResourcesRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(EoBServiceServer).WatchResources(m, &grpc.GenericServerStream[WatchResourcesRequest, WatchResourcesResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type EoBService_WatchResourcesServer = grpc.ServerStreamingServer[WatchResourcesResponse]
+
+func _EoBService_EventStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(EventStreamRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(EoBServiceServer).EventStream(m, &grpc.GenericServerStream[EventStreamRequest, EventStreamResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type EoBService_EventStreamServer = grpc.ServerStreamingServer[EventStreamResponse]
+
+func _EoBService_TailStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(TailStreamRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(EoBServiceServer).TailStream(m, &grpc.GenericServerStream[TailStreamRequest, TailStreamResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type EoBService_TailStreamServer = grpc.ServerStreamingServer[TailStreamResponse]
+
 // EoBService_ServiceDesc is the grpc.ServiceDesc for EoBService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -481,7 +681,31 @@ var EoBService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "StreamRead",
 			Handler:    _EoBService_StreamRead_Handler,
 		},
+		{
+			MethodName: "Heartbeat",
+			Handler:    _EoBService_Heartbeat_Handler,
+		},
+		{
+			MethodName: "BatchApply",
+			Handler:    _EoBService_BatchApply_Handler,
+		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "WatchResources",
+			Handler:       _EoBService_WatchResources_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "EventStream",
+			Handler:       _EoBService_EventStream_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "TailStream",
+			Handler:       _EoBService_TailStream_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "eob/v1/service.proto",
 }

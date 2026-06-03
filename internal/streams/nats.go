@@ -151,5 +151,87 @@ func (r *JSReader) Read(ctx context.Context, name string, opts ReadOpts) ([]*Raw
 	return out, nil
 }
 
+// defaultTailBufSize is the channel buffer when the caller does not set
+// TailOpts.BufSize. Small enough to provide real backpressure (slow
+// consumer slows NATS draining) without burning memory.
+const defaultTailBufSize = 64
+
+// Tail subscribes to the named stream with an ordered ephemeral consumer
+// and pushes RawMessages onto the returned channel as they arrive. The
+// channel is closed when ctx is canceled or the consumer stops.
+//
+// DeliverPolicy is chosen from opts:
+//   - StartAtSeq > 0           → DeliverByStartSequencePolicy
+//   - StartAtTS not zero       → DeliverByStartTimePolicy
+//   - both empty/zero          → DeliverNewPolicy (live tail from now)
+func (r *JSReader) Tail(ctx context.Context, name string, opts TailOpts) (<-chan *RawMessage, error) {
+	stream, err := r.js.Stream(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("streams: stream %q: %w", name, err)
+	}
+
+	cfg := jetstream.OrderedConsumerConfig{
+		DeliverPolicy: jetstream.DeliverNewPolicy,
+	}
+	switch {
+	case opts.StartAtSeq > 0:
+		cfg.DeliverPolicy = jetstream.DeliverByStartSequencePolicy
+		cfg.OptStartSeq = opts.StartAtSeq
+	case !opts.StartAtTS.IsZero():
+		cfg.DeliverPolicy = jetstream.DeliverByStartTimePolicy
+		cfg.OptStartTime = &opts.StartAtTS
+	}
+
+	cons, err := stream.OrderedConsumer(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("streams: tail consumer %q: %w", name, err)
+	}
+
+	bufSize := opts.BufSize
+	if bufSize <= 0 {
+		bufSize = defaultTailBufSize
+	}
+	ch := make(chan *RawMessage, bufSize)
+
+	// Send is guarded by a recover so a final in-flight callback racing
+	// with the cleanup goroutine's close(ch) doesn't crash the process.
+	// nats.go's orderedConsumer.Stop is best-effort: callbacks can fire
+	// for a short window after Stop returns, which is exactly the race
+	// the recover catches.
+	send := func(m *RawMessage) {
+		defer func() { _ = recover() }()
+		select {
+		case ch <- m:
+		case <-ctx.Done():
+		}
+	}
+
+	cc, err := cons.Consume(func(msg jetstream.Msg) {
+		meta, err := msg.Metadata()
+		if err != nil {
+			return
+		}
+		send(&RawMessage{
+			Subject:   msg.Subject(),
+			Sequence:  meta.Sequence.Stream,
+			Timestamp: meta.Timestamp,
+			Data:      msg.Data(),
+		})
+	})
+	if err != nil {
+		close(ch)
+		return nil, fmt.Errorf("streams: tail consume %q: %w", name, err)
+	}
+
+	// Goroutine cleans up when the caller cancels the context.
+	go func() {
+		<-ctx.Done()
+		cc.Stop()
+		close(ch)
+	}()
+
+	return ch, nil
+}
+
 // Compile-time assertion.
 var _ Reader = (*JSReader)(nil)

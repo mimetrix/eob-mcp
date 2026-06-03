@@ -1756,6 +1756,978 @@ func (x *StreamReadResponse) GetMessages() []*RawEnvelope {
 	return nil
 }
 
+type HeartbeatRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HeartbeatRequest) Reset() {
+	*x = HeartbeatRequest{}
+	mi := &file_eob_v1_service_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HeartbeatRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HeartbeatRequest) ProtoMessage() {}
+
+func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HeartbeatRequest.ProtoReflect.Descriptor instead.
+func (*HeartbeatRequest) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{26}
+}
+
+type HeartbeatResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Cluster *ClusterRef            `protobuf:"bytes,1,opt,name=cluster,proto3" json:"cluster,omitempty"`
+	// RFC3339; aggregator computes its own clock skew against this.
+	ServerTime string `protobuf:"bytes,2,opt,name=server_time,json=serverTime,proto3" json:"server_time,omitempty"`
+	// Seconds since process start; resets on pod restart.
+	UptimeSeconds int64 `protobuf:"varint,3,opt,name=uptime_seconds,json=uptimeSeconds,proto3" json:"uptime_seconds,omitempty"`
+	// Backend reachability snapshots, observed by the most recent
+	// health-probe pass (not freshly re-tested for every Heartbeat).
+	KubeReachable    bool `protobuf:"varint,4,opt,name=kube_reachable,json=kubeReachable,proto3" json:"kube_reachable,omitempty"`
+	StreamsReachable bool `protobuf:"varint,5,opt,name=streams_reachable,json=streamsReachable,proto3" json:"streams_reachable,omitempty"`
+	// Coarse counters useful for fleet dashboards.
+	DirectiveCount int32 `protobuf:"varint,6,opt,name=directive_count,json=directiveCount,proto3" json:"directive_count,omitempty"`
+	StreamCount    int32 `protobuf:"varint,7,opt,name=stream_count,json=streamCount,proto3" json:"stream_count,omitempty"`
+	// Errors observed by the server's internal log handler in the last
+	// 24h (best-effort, may reset on restart). Aggregator uses this as
+	// a "drill in here" signal.
+	ErrorCount_24H int32 `protobuf:"varint,8,opt,name=error_count_24h,json=errorCount24h,proto3" json:"error_count_24h,omitempty"`
+	// Build identity — same fields as ClusterIdentity but kept here so
+	// Heartbeat is self-sufficient for fleet inventory.
+	McpVersion    string `protobuf:"bytes,9,opt,name=mcp_version,json=mcpVersion,proto3" json:"mcp_version,omitempty"`
+	EobVersion    string `protobuf:"bytes,10,opt,name=eob_version,json=eobVersion,proto3" json:"eob_version,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HeartbeatResponse) Reset() {
+	*x = HeartbeatResponse{}
+	mi := &file_eob_v1_service_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HeartbeatResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HeartbeatResponse) ProtoMessage() {}
+
+func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HeartbeatResponse.ProtoReflect.Descriptor instead.
+func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *HeartbeatResponse) GetCluster() *ClusterRef {
+	if x != nil {
+		return x.Cluster
+	}
+	return nil
+}
+
+func (x *HeartbeatResponse) GetServerTime() string {
+	if x != nil {
+		return x.ServerTime
+	}
+	return ""
+}
+
+func (x *HeartbeatResponse) GetUptimeSeconds() int64 {
+	if x != nil {
+		return x.UptimeSeconds
+	}
+	return 0
+}
+
+func (x *HeartbeatResponse) GetKubeReachable() bool {
+	if x != nil {
+		return x.KubeReachable
+	}
+	return false
+}
+
+func (x *HeartbeatResponse) GetStreamsReachable() bool {
+	if x != nil {
+		return x.StreamsReachable
+	}
+	return false
+}
+
+func (x *HeartbeatResponse) GetDirectiveCount() int32 {
+	if x != nil {
+		return x.DirectiveCount
+	}
+	return 0
+}
+
+func (x *HeartbeatResponse) GetStreamCount() int32 {
+	if x != nil {
+		return x.StreamCount
+	}
+	return 0
+}
+
+func (x *HeartbeatResponse) GetErrorCount_24H() int32 {
+	if x != nil {
+		return x.ErrorCount_24H
+	}
+	return 0
+}
+
+func (x *HeartbeatResponse) GetMcpVersion() string {
+	if x != nil {
+		return x.McpVersion
+	}
+	return ""
+}
+
+func (x *HeartbeatResponse) GetEobVersion() string {
+	if x != nil {
+		return x.EobVersion
+	}
+	return ""
+}
+
+type BatchApplyItem struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Same payload as ResourceApplyRequest.manifest. YAML or JSON.
+	Manifest string `protobuf:"bytes,1,opt,name=manifest,proto3" json:"manifest,omitempty"`
+	// Optional per-item override; when unset, falls back to the batch
+	// request's dry_run / force.
+	DryRun        bool `protobuf:"varint,2,opt,name=dry_run,json=dryRun,proto3" json:"dry_run,omitempty"`
+	Force         bool `protobuf:"varint,3,opt,name=force,proto3" json:"force,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchApplyItem) Reset() {
+	*x = BatchApplyItem{}
+	mi := &file_eob_v1_service_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchApplyItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchApplyItem) ProtoMessage() {}
+
+func (x *BatchApplyItem) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchApplyItem.ProtoReflect.Descriptor instead.
+func (*BatchApplyItem) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *BatchApplyItem) GetManifest() string {
+	if x != nil {
+		return x.Manifest
+	}
+	return ""
+}
+
+func (x *BatchApplyItem) GetDryRun() bool {
+	if x != nil {
+		return x.DryRun
+	}
+	return false
+}
+
+func (x *BatchApplyItem) GetForce() bool {
+	if x != nil {
+		return x.Force
+	}
+	return false
+}
+
+type BatchApplyRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Items []*BatchApplyItem      `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	// Batch-level defaults; per-item flags override.
+	DryRun        bool `protobuf:"varint,2,opt,name=dry_run,json=dryRun,proto3" json:"dry_run,omitempty"`
+	Force         bool `protobuf:"varint,3,opt,name=force,proto3" json:"force,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchApplyRequest) Reset() {
+	*x = BatchApplyRequest{}
+	mi := &file_eob_v1_service_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchApplyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchApplyRequest) ProtoMessage() {}
+
+func (x *BatchApplyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchApplyRequest.ProtoReflect.Descriptor instead.
+func (*BatchApplyRequest) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *BatchApplyRequest) GetItems() []*BatchApplyItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *BatchApplyRequest) GetDryRun() bool {
+	if x != nil {
+		return x.DryRun
+	}
+	return false
+}
+
+func (x *BatchApplyRequest) GetForce() bool {
+	if x != nil {
+		return x.Force
+	}
+	return false
+}
+
+// status is one of: "applied" | "error".
+type BatchApplyResult struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Kind            string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	ApiGroup        string                 `protobuf:"bytes,2,opt,name=api_group,json=apiGroup,proto3" json:"api_group,omitempty"`
+	Namespace       string                 `protobuf:"bytes,3,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Name            string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	Status          string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	Error           string                 `protobuf:"bytes,6,opt,name=error,proto3" json:"error,omitempty"`
+	Uid             string                 `protobuf:"bytes,7,opt,name=uid,proto3" json:"uid,omitempty"`
+	ResourceVersion string                 `protobuf:"bytes,8,opt,name=resource_version,json=resourceVersion,proto3" json:"resource_version,omitempty"`
+	Generation      int64                  `protobuf:"varint,9,opt,name=generation,proto3" json:"generation,omitempty"`
+	DryRun          bool                   `protobuf:"varint,10,opt,name=dry_run,json=dryRun,proto3" json:"dry_run,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *BatchApplyResult) Reset() {
+	*x = BatchApplyResult{}
+	mi := &file_eob_v1_service_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchApplyResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchApplyResult) ProtoMessage() {}
+
+func (x *BatchApplyResult) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchApplyResult.ProtoReflect.Descriptor instead.
+func (*BatchApplyResult) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *BatchApplyResult) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *BatchApplyResult) GetApiGroup() string {
+	if x != nil {
+		return x.ApiGroup
+	}
+	return ""
+}
+
+func (x *BatchApplyResult) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *BatchApplyResult) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *BatchApplyResult) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *BatchApplyResult) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
+func (x *BatchApplyResult) GetUid() string {
+	if x != nil {
+		return x.Uid
+	}
+	return ""
+}
+
+func (x *BatchApplyResult) GetResourceVersion() string {
+	if x != nil {
+		return x.ResourceVersion
+	}
+	return ""
+}
+
+func (x *BatchApplyResult) GetGeneration() int64 {
+	if x != nil {
+		return x.Generation
+	}
+	return 0
+}
+
+func (x *BatchApplyResult) GetDryRun() bool {
+	if x != nil {
+		return x.DryRun
+	}
+	return false
+}
+
+type BatchApplyResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Cluster *ClusterRef            `protobuf:"bytes,1,opt,name=cluster,proto3" json:"cluster,omitempty"`
+	Items   []*BatchApplyResult    `protobuf:"bytes,2,rep,name=items,proto3" json:"items,omitempty"`
+	// Convenience counters; sum to items.length.
+	Applied       int32 `protobuf:"varint,3,opt,name=applied,proto3" json:"applied,omitempty"`
+	Errors        int32 `protobuf:"varint,4,opt,name=errors,proto3" json:"errors,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchApplyResponse) Reset() {
+	*x = BatchApplyResponse{}
+	mi := &file_eob_v1_service_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchApplyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchApplyResponse) ProtoMessage() {}
+
+func (x *BatchApplyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchApplyResponse.ProtoReflect.Descriptor instead.
+func (*BatchApplyResponse) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *BatchApplyResponse) GetCluster() *ClusterRef {
+	if x != nil {
+		return x.Cluster
+	}
+	return nil
+}
+
+func (x *BatchApplyResponse) GetItems() []*BatchApplyResult {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *BatchApplyResponse) GetApplied() int32 {
+	if x != nil {
+		return x.Applied
+	}
+	return 0
+}
+
+func (x *BatchApplyResponse) GetErrors() int32 {
+	if x != nil {
+		return x.Errors
+	}
+	return 0
+}
+
+type WatchResourcesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	ApiGroup      string                 `protobuf:"bytes,2,opt,name=api_group,json=apiGroup,proto3" json:"api_group,omitempty"`
+	Namespace     string                 `protobuf:"bytes,3,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	LabelSelector string                 `protobuf:"bytes,4,opt,name=label_selector,json=labelSelector,proto3" json:"label_selector,omitempty"`
+	// Optional starting point. Empty → server picks a "list-then-watch"
+	// strategy (initial ADDED events for each existing object, then
+	// updates). Set to "0" for "watch latest only" semantics.
+	ResourceVersion string `protobuf:"bytes,5,opt,name=resource_version,json=resourceVersion,proto3" json:"resource_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *WatchResourcesRequest) Reset() {
+	*x = WatchResourcesRequest{}
+	mi := &file_eob_v1_service_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WatchResourcesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchResourcesRequest) ProtoMessage() {}
+
+func (x *WatchResourcesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchResourcesRequest.ProtoReflect.Descriptor instead.
+func (*WatchResourcesRequest) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *WatchResourcesRequest) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *WatchResourcesRequest) GetApiGroup() string {
+	if x != nil {
+		return x.ApiGroup
+	}
+	return ""
+}
+
+func (x *WatchResourcesRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *WatchResourcesRequest) GetLabelSelector() string {
+	if x != nil {
+		return x.LabelSelector
+	}
+	return ""
+}
+
+func (x *WatchResourcesRequest) GetResourceVersion() string {
+	if x != nil {
+		return x.ResourceVersion
+	}
+	return ""
+}
+
+// event_type matches k8s watch: "ADDED" | "MODIFIED" | "DELETED" |
+// "BOOKMARK" | "ERROR". On BOOKMARK, object carries the current
+// resourceVersion only — useful for resumable streams.
+type WatchResourcesResponse struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Cluster   *ClusterRef            `protobuf:"bytes,1,opt,name=cluster,proto3" json:"cluster,omitempty"`
+	EventType string                 `protobuf:"bytes,2,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	Kind      string                 `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
+	ApiGroup  string                 `protobuf:"bytes,4,opt,name=api_group,json=apiGroup,proto3" json:"api_group,omitempty"`
+	Object    *structpb.Struct       `protobuf:"bytes,5,opt,name=object,proto3" json:"object,omitempty"`
+	// Convenience: top-level object metadata fields lifted out so
+	// aggregators can route without re-parsing object.
+	Namespace       string `protobuf:"bytes,6,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	Name            string `protobuf:"bytes,7,opt,name=name,proto3" json:"name,omitempty"`
+	ResourceVersion string `protobuf:"bytes,8,opt,name=resource_version,json=resourceVersion,proto3" json:"resource_version,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *WatchResourcesResponse) Reset() {
+	*x = WatchResourcesResponse{}
+	mi := &file_eob_v1_service_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WatchResourcesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WatchResourcesResponse) ProtoMessage() {}
+
+func (x *WatchResourcesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WatchResourcesResponse.ProtoReflect.Descriptor instead.
+func (*WatchResourcesResponse) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *WatchResourcesResponse) GetCluster() *ClusterRef {
+	if x != nil {
+		return x.Cluster
+	}
+	return nil
+}
+
+func (x *WatchResourcesResponse) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *WatchResourcesResponse) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *WatchResourcesResponse) GetApiGroup() string {
+	if x != nil {
+		return x.ApiGroup
+	}
+	return ""
+}
+
+func (x *WatchResourcesResponse) GetObject() *structpb.Struct {
+	if x != nil {
+		return x.Object
+	}
+	return nil
+}
+
+func (x *WatchResourcesResponse) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *WatchResourcesResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *WatchResourcesResponse) GetResourceVersion() string {
+	if x != nil {
+		return x.ResourceVersion
+	}
+	return ""
+}
+
+type EventStreamRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Optional filters. Empty fields mean "all".
+	Namespace string `protobuf:"bytes,1,opt,name=namespace,proto3" json:"namespace,omitempty"`
+	// Filter by k8s involvedObject.kind. e.g. "ClusterDirective".
+	Kind string `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	// "k8s" | "audit" | "" (both). k8s = events API, audit = eob-mcp's
+	// own apply/delete trail.
+	Source        string `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventStreamRequest) Reset() {
+	*x = EventStreamRequest{}
+	mi := &file_eob_v1_service_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventStreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventStreamRequest) ProtoMessage() {}
+
+func (x *EventStreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventStreamRequest.ProtoReflect.Descriptor instead.
+func (*EventStreamRequest) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *EventStreamRequest) GetNamespace() string {
+	if x != nil {
+		return x.Namespace
+	}
+	return ""
+}
+
+func (x *EventStreamRequest) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *EventStreamRequest) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+// type is one of: "Normal" | "Warning" | "Audit". reason mirrors
+// k8s Events.reason for source=k8s; for source=audit it's one of
+// "ResourceApply" | "ResourceDelete" | "BatchApply".
+type EventStreamResponse struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Cluster   *ClusterRef            `protobuf:"bytes,1,opt,name=cluster,proto3" json:"cluster,omitempty"`
+	Source    string                 `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"` // "k8s" | "audit"
+	Type      string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	Reason    string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	Message   string                 `protobuf:"bytes,5,opt,name=message,proto3" json:"message,omitempty"`
+	Timestamp string                 `protobuf:"bytes,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // RFC3339
+	// Involved object — k8s Events.involvedObject, or the apply target
+	// for audit events.
+	InvolvedKind      string `protobuf:"bytes,7,opt,name=involved_kind,json=involvedKind,proto3" json:"involved_kind,omitempty"`
+	InvolvedName      string `protobuf:"bytes,8,opt,name=involved_name,json=involvedName,proto3" json:"involved_name,omitempty"`
+	InvolvedNamespace string `protobuf:"bytes,9,opt,name=involved_namespace,json=involvedNamespace,proto3" json:"involved_namespace,omitempty"`
+	// For source=audit: identity of the caller (mTLS subject or token
+	// claim) when available; empty otherwise. We do not invent identities.
+	Actor         string `protobuf:"bytes,10,opt,name=actor,proto3" json:"actor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EventStreamResponse) Reset() {
+	*x = EventStreamResponse{}
+	mi := &file_eob_v1_service_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EventStreamResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EventStreamResponse) ProtoMessage() {}
+
+func (x *EventStreamResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EventStreamResponse.ProtoReflect.Descriptor instead.
+func (*EventStreamResponse) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *EventStreamResponse) GetCluster() *ClusterRef {
+	if x != nil {
+		return x.Cluster
+	}
+	return nil
+}
+
+func (x *EventStreamResponse) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *EventStreamResponse) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *EventStreamResponse) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *EventStreamResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *EventStreamResponse) GetTimestamp() string {
+	if x != nil {
+		return x.Timestamp
+	}
+	return ""
+}
+
+func (x *EventStreamResponse) GetInvolvedKind() string {
+	if x != nil {
+		return x.InvolvedKind
+	}
+	return ""
+}
+
+func (x *EventStreamResponse) GetInvolvedName() string {
+	if x != nil {
+		return x.InvolvedName
+	}
+	return ""
+}
+
+func (x *EventStreamResponse) GetInvolvedNamespace() string {
+	if x != nil {
+		return x.InvolvedNamespace
+	}
+	return ""
+}
+
+func (x *EventStreamResponse) GetActor() string {
+	if x != nil {
+		return x.Actor
+	}
+	return ""
+}
+
+type TailStreamRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// jq filter, same semantics as StreamRead.filter.
+	Filter string `protobuf:"bytes,2,opt,name=filter,proto3" json:"filter,omitempty"`
+	// Optional starting point. Mutually exclusive; if both set,
+	// start_at_seq wins.
+	//
+	//	start_at_seq=0 + start_at_ts="" → deliver new messages only
+	//	start_at_seq=N                  → deliver from sequence N forward
+	//	start_at_ts=RFC3339             → deliver from that timestamp forward
+	StartAtSeq    uint64 `protobuf:"varint,3,opt,name=start_at_seq,json=startAtSeq,proto3" json:"start_at_seq,omitempty"`
+	StartAtTs     string `protobuf:"bytes,4,opt,name=start_at_ts,json=startAtTs,proto3" json:"start_at_ts,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TailStreamRequest) Reset() {
+	*x = TailStreamRequest{}
+	mi := &file_eob_v1_service_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TailStreamRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TailStreamRequest) ProtoMessage() {}
+
+func (x *TailStreamRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TailStreamRequest.ProtoReflect.Descriptor instead.
+func (*TailStreamRequest) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *TailStreamRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *TailStreamRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
+func (x *TailStreamRequest) GetStartAtSeq() uint64 {
+	if x != nil {
+		return x.StartAtSeq
+	}
+	return 0
+}
+
+func (x *TailStreamRequest) GetStartAtTs() string {
+	if x != nil {
+		return x.StartAtTs
+	}
+	return ""
+}
+
+// Wraps RawEnvelope so every streamed message carries the federation
+// envelope (ClusterRef) — same pattern as the unary responses.
+type TailStreamResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Cluster       *ClusterRef            `protobuf:"bytes,1,opt,name=cluster,proto3" json:"cluster,omitempty"`
+	Envelope      *RawEnvelope           `protobuf:"bytes,2,opt,name=envelope,proto3" json:"envelope,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TailStreamResponse) Reset() {
+	*x = TailStreamResponse{}
+	mi := &file_eob_v1_service_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TailStreamResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TailStreamResponse) ProtoMessage() {}
+
+func (x *TailStreamResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TailStreamResponse.ProtoReflect.Descriptor instead.
+func (*TailStreamResponse) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *TailStreamResponse) GetCluster() *ClusterRef {
+	if x != nil {
+		return x.Cluster
+	}
+	return nil
+}
+
+func (x *TailStreamResponse) GetEnvelope() *RawEnvelope {
+	if x != nil {
+		return x.Envelope
+	}
+	return nil
+}
+
 var File_eob_v1_service_proto protoreflect.FileDescriptor
 
 const file_eob_v1_service_proto_rawDesc = "" +
@@ -1904,7 +2876,91 @@ const file_eob_v1_service_proto_rawDesc = "" +
 	"\acluster\x18\x01 \x01(\v2\x12.eob.v1.ClusterRefR\acluster\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
 	"\x05count\x18\x03 \x01(\x05R\x05count\x12/\n" +
-	"\bmessages\x18\x04 \x03(\v2\x13.eob.v1.RawEnvelopeR\bmessages2\xf7\x05\n" +
+	"\bmessages\x18\x04 \x03(\v2\x13.eob.v1.RawEnvelopeR\bmessages\"\x12\n" +
+	"\x10HeartbeatRequest\"\x93\x03\n" +
+	"\x11HeartbeatResponse\x12,\n" +
+	"\acluster\x18\x01 \x01(\v2\x12.eob.v1.ClusterRefR\acluster\x12\x1f\n" +
+	"\vserver_time\x18\x02 \x01(\tR\n" +
+	"serverTime\x12%\n" +
+	"\x0euptime_seconds\x18\x03 \x01(\x03R\ruptimeSeconds\x12%\n" +
+	"\x0ekube_reachable\x18\x04 \x01(\bR\rkubeReachable\x12+\n" +
+	"\x11streams_reachable\x18\x05 \x01(\bR\x10streamsReachable\x12'\n" +
+	"\x0fdirective_count\x18\x06 \x01(\x05R\x0edirectiveCount\x12!\n" +
+	"\fstream_count\x18\a \x01(\x05R\vstreamCount\x12&\n" +
+	"\x0ferror_count_24h\x18\b \x01(\x05R\rerrorCount24h\x12\x1f\n" +
+	"\vmcp_version\x18\t \x01(\tR\n" +
+	"mcpVersion\x12\x1f\n" +
+	"\veob_version\x18\n" +
+	" \x01(\tR\n" +
+	"eobVersion\"[\n" +
+	"\x0eBatchApplyItem\x12\x1a\n" +
+	"\bmanifest\x18\x01 \x01(\tR\bmanifest\x12\x17\n" +
+	"\adry_run\x18\x02 \x01(\bR\x06dryRun\x12\x14\n" +
+	"\x05force\x18\x03 \x01(\bR\x05force\"p\n" +
+	"\x11BatchApplyRequest\x12,\n" +
+	"\x05items\x18\x01 \x03(\v2\x16.eob.v1.BatchApplyItemR\x05items\x12\x17\n" +
+	"\adry_run\x18\x02 \x01(\bR\x06dryRun\x12\x14\n" +
+	"\x05force\x18\x03 \x01(\bR\x05force\"\x99\x02\n" +
+	"\x10BatchApplyResult\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x1b\n" +
+	"\tapi_group\x18\x02 \x01(\tR\bapiGroup\x12\x1c\n" +
+	"\tnamespace\x18\x03 \x01(\tR\tnamespace\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x14\n" +
+	"\x05error\x18\x06 \x01(\tR\x05error\x12\x10\n" +
+	"\x03uid\x18\a \x01(\tR\x03uid\x12)\n" +
+	"\x10resource_version\x18\b \x01(\tR\x0fresourceVersion\x12\x1e\n" +
+	"\n" +
+	"generation\x18\t \x01(\x03R\n" +
+	"generation\x12\x17\n" +
+	"\adry_run\x18\n" +
+	" \x01(\bR\x06dryRun\"\xa4\x01\n" +
+	"\x12BatchApplyResponse\x12,\n" +
+	"\acluster\x18\x01 \x01(\v2\x12.eob.v1.ClusterRefR\acluster\x12.\n" +
+	"\x05items\x18\x02 \x03(\v2\x18.eob.v1.BatchApplyResultR\x05items\x12\x18\n" +
+	"\aapplied\x18\x03 \x01(\x05R\aapplied\x12\x16\n" +
+	"\x06errors\x18\x04 \x01(\x05R\x06errors\"\xb8\x01\n" +
+	"\x15WatchResourcesRequest\x12\x12\n" +
+	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x1b\n" +
+	"\tapi_group\x18\x02 \x01(\tR\bapiGroup\x12\x1c\n" +
+	"\tnamespace\x18\x03 \x01(\tR\tnamespace\x12%\n" +
+	"\x0elabel_selector\x18\x04 \x01(\tR\rlabelSelector\x12)\n" +
+	"\x10resource_version\x18\x05 \x01(\tR\x0fresourceVersion\"\xa4\x02\n" +
+	"\x16WatchResourcesResponse\x12,\n" +
+	"\acluster\x18\x01 \x01(\v2\x12.eob.v1.ClusterRefR\acluster\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x02 \x01(\tR\teventType\x12\x12\n" +
+	"\x04kind\x18\x03 \x01(\tR\x04kind\x12\x1b\n" +
+	"\tapi_group\x18\x04 \x01(\tR\bapiGroup\x12/\n" +
+	"\x06object\x18\x05 \x01(\v2\x17.google.protobuf.StructR\x06object\x12\x1c\n" +
+	"\tnamespace\x18\x06 \x01(\tR\tnamespace\x12\x12\n" +
+	"\x04name\x18\a \x01(\tR\x04name\x12)\n" +
+	"\x10resource_version\x18\b \x01(\tR\x0fresourceVersion\"^\n" +
+	"\x12EventStreamRequest\x12\x1c\n" +
+	"\tnamespace\x18\x01 \x01(\tR\tnamespace\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x16\n" +
+	"\x06source\x18\x03 \x01(\tR\x06source\"\xce\x02\n" +
+	"\x13EventStreamResponse\x12,\n" +
+	"\acluster\x18\x01 \x01(\v2\x12.eob.v1.ClusterRefR\acluster\x12\x16\n" +
+	"\x06source\x18\x02 \x01(\tR\x06source\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x18\n" +
+	"\amessage\x18\x05 \x01(\tR\amessage\x12\x1c\n" +
+	"\ttimestamp\x18\x06 \x01(\tR\ttimestamp\x12#\n" +
+	"\rinvolved_kind\x18\a \x01(\tR\finvolvedKind\x12#\n" +
+	"\rinvolved_name\x18\b \x01(\tR\finvolvedName\x12-\n" +
+	"\x12involved_namespace\x18\t \x01(\tR\x11involvedNamespace\x12\x14\n" +
+	"\x05actor\x18\n" +
+	" \x01(\tR\x05actor\"\x81\x01\n" +
+	"\x11TailStreamRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06filter\x18\x02 \x01(\tR\x06filter\x12 \n" +
+	"\fstart_at_seq\x18\x03 \x01(\x04R\n" +
+	"startAtSeq\x12\x1e\n" +
+	"\vstart_at_ts\x18\x04 \x01(\tR\tstartAtTs\"s\n" +
+	"\x12TailStreamResponse\x12,\n" +
+	"\acluster\x18\x01 \x01(\v2\x12.eob.v1.ClusterRefR\acluster\x12/\n" +
+	"\benvelope\x18\x02 \x01(\v2\x13.eob.v1.RawEnvelopeR\benvelope2\xe2\b\n" +
 	"\n" +
 	"EoBService\x12R\n" +
 	"\x0fClusterIdentity\x12\x1e.eob.v1.ClusterIdentityRequest\x1a\x1f.eob.v1.ClusterIdentityResponse\x12@\n" +
@@ -1918,7 +2974,14 @@ const file_eob_v1_service_proto_rawDesc = "" +
 	"StreamList\x12\x19.eob.v1.StreamListRequest\x1a\x1a.eob.v1.StreamListResponse\x12F\n" +
 	"\vStreamStats\x12\x1a.eob.v1.StreamStatsRequest\x1a\x1b.eob.v1.StreamStatsResponse\x12C\n" +
 	"\n" +
-	"StreamRead\x12\x19.eob.v1.StreamReadRequest\x1a\x1a.eob.v1.StreamReadResponseB1Z/github.com/mimetrix/eob-mcp/gen/go/eob/v1;eobv1b\x06proto3"
+	"StreamRead\x12\x19.eob.v1.StreamReadRequest\x1a\x1a.eob.v1.StreamReadResponse\x12@\n" +
+	"\tHeartbeat\x12\x18.eob.v1.HeartbeatRequest\x1a\x19.eob.v1.HeartbeatResponse\x12C\n" +
+	"\n" +
+	"BatchApply\x12\x19.eob.v1.BatchApplyRequest\x1a\x1a.eob.v1.BatchApplyResponse\x12Q\n" +
+	"\x0eWatchResources\x12\x1d.eob.v1.WatchResourcesRequest\x1a\x1e.eob.v1.WatchResourcesResponse0\x01\x12H\n" +
+	"\vEventStream\x12\x1a.eob.v1.EventStreamRequest\x1a\x1b.eob.v1.EventStreamResponse0\x01\x12E\n" +
+	"\n" +
+	"TailStream\x12\x19.eob.v1.TailStreamRequest\x1a\x1a.eob.v1.TailStreamResponse0\x01B1Z/github.com/mimetrix/eob-mcp/gen/go/eob/v1;eobv1b\x06proto3"
 
 var (
 	file_eob_v1_service_proto_rawDescOnce sync.Once
@@ -1932,7 +2995,7 @@ func file_eob_v1_service_proto_rawDescGZIP() []byte {
 	return file_eob_v1_service_proto_rawDescData
 }
 
-var file_eob_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_eob_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
 var file_eob_v1_service_proto_goTypes = []any{
 	(*ClusterRef)(nil),              // 0: eob.v1.ClusterRef
 	(*ClusterIdentityRequest)(nil),  // 1: eob.v1.ClusterIdentityRequest
@@ -1960,57 +3023,88 @@ var file_eob_v1_service_proto_goTypes = []any{
 	(*StreamReadRequest)(nil),       // 23: eob.v1.StreamReadRequest
 	(*RawEnvelope)(nil),             // 24: eob.v1.RawEnvelope
 	(*StreamReadResponse)(nil),      // 25: eob.v1.StreamReadResponse
-	nil,                             // 26: eob.v1.EoBHealthResponse.ComponentsEntry
-	nil,                             // 27: eob.v1.EoBHealthResponse.AgentsPerNodeEntry
-	(*structpb.Struct)(nil),         // 28: google.protobuf.Struct
+	(*HeartbeatRequest)(nil),        // 26: eob.v1.HeartbeatRequest
+	(*HeartbeatResponse)(nil),       // 27: eob.v1.HeartbeatResponse
+	(*BatchApplyItem)(nil),          // 28: eob.v1.BatchApplyItem
+	(*BatchApplyRequest)(nil),       // 29: eob.v1.BatchApplyRequest
+	(*BatchApplyResult)(nil),        // 30: eob.v1.BatchApplyResult
+	(*BatchApplyResponse)(nil),      // 31: eob.v1.BatchApplyResponse
+	(*WatchResourcesRequest)(nil),   // 32: eob.v1.WatchResourcesRequest
+	(*WatchResourcesResponse)(nil),  // 33: eob.v1.WatchResourcesResponse
+	(*EventStreamRequest)(nil),      // 34: eob.v1.EventStreamRequest
+	(*EventStreamResponse)(nil),     // 35: eob.v1.EventStreamResponse
+	(*TailStreamRequest)(nil),       // 36: eob.v1.TailStreamRequest
+	(*TailStreamResponse)(nil),      // 37: eob.v1.TailStreamResponse
+	nil,                             // 38: eob.v1.EoBHealthResponse.ComponentsEntry
+	nil,                             // 39: eob.v1.EoBHealthResponse.AgentsPerNodeEntry
+	(*structpb.Struct)(nil),         // 40: google.protobuf.Struct
 }
 var file_eob_v1_service_proto_depIdxs = []int32{
 	0,  // 0: eob.v1.ClusterIdentityResponse.cluster:type_name -> eob.v1.ClusterRef
 	0,  // 1: eob.v1.EoBHealthResponse.cluster:type_name -> eob.v1.ClusterRef
-	26, // 2: eob.v1.EoBHealthResponse.components:type_name -> eob.v1.EoBHealthResponse.ComponentsEntry
+	38, // 2: eob.v1.EoBHealthResponse.components:type_name -> eob.v1.EoBHealthResponse.ComponentsEntry
 	5,  // 3: eob.v1.EoBHealthResponse.directives:type_name -> eob.v1.DirectiveStatus
-	27, // 4: eob.v1.EoBHealthResponse.agents_per_node:type_name -> eob.v1.EoBHealthResponse.AgentsPerNodeEntry
+	39, // 4: eob.v1.EoBHealthResponse.agents_per_node:type_name -> eob.v1.EoBHealthResponse.AgentsPerNodeEntry
 	0,  // 5: eob.v1.ResourceListResponse.cluster:type_name -> eob.v1.ClusterRef
-	28, // 6: eob.v1.ResourceListResponse.items:type_name -> google.protobuf.Struct
+	40, // 6: eob.v1.ResourceListResponse.items:type_name -> google.protobuf.Struct
 	0,  // 7: eob.v1.ResourceGetResponse.cluster:type_name -> eob.v1.ClusterRef
-	28, // 8: eob.v1.ResourceGetResponse.object:type_name -> google.protobuf.Struct
+	40, // 8: eob.v1.ResourceGetResponse.object:type_name -> google.protobuf.Struct
 	0,  // 9: eob.v1.ResourceApplyResponse.cluster:type_name -> eob.v1.ClusterRef
 	0,  // 10: eob.v1.ResourceDeleteResponse.cluster:type_name -> eob.v1.ClusterRef
 	0,  // 11: eob.v1.ResourceSchemaResponse.cluster:type_name -> eob.v1.ClusterRef
-	28, // 12: eob.v1.ResourceSchemaResponse.openapi_v3_schema:type_name -> google.protobuf.Struct
+	40, // 12: eob.v1.ResourceSchemaResponse.openapi_v3_schema:type_name -> google.protobuf.Struct
 	0,  // 13: eob.v1.StreamListResponse.cluster:type_name -> eob.v1.ClusterRef
 	18, // 14: eob.v1.StreamListResponse.streams:type_name -> eob.v1.StreamInfo
 	0,  // 15: eob.v1.StreamStatsResponse.cluster:type_name -> eob.v1.ClusterRef
-	28, // 16: eob.v1.RawEnvelope.data:type_name -> google.protobuf.Struct
+	40, // 16: eob.v1.RawEnvelope.data:type_name -> google.protobuf.Struct
 	0,  // 17: eob.v1.StreamReadResponse.cluster:type_name -> eob.v1.ClusterRef
 	24, // 18: eob.v1.StreamReadResponse.messages:type_name -> eob.v1.RawEnvelope
-	4,  // 19: eob.v1.EoBHealthResponse.ComponentsEntry.value:type_name -> eob.v1.ComponentStatus
-	6,  // 20: eob.v1.EoBHealthResponse.AgentsPerNodeEntry.value:type_name -> eob.v1.NodeAgentSummary
-	1,  // 21: eob.v1.EoBService.ClusterIdentity:input_type -> eob.v1.ClusterIdentityRequest
-	3,  // 22: eob.v1.EoBService.EoBHealth:input_type -> eob.v1.EoBHealthRequest
-	8,  // 23: eob.v1.EoBService.ResourceList:input_type -> eob.v1.ResourceListRequest
-	10, // 24: eob.v1.EoBService.ResourceGet:input_type -> eob.v1.ResourceGetRequest
-	12, // 25: eob.v1.EoBService.ResourceApply:input_type -> eob.v1.ResourceApplyRequest
-	14, // 26: eob.v1.EoBService.ResourceDelete:input_type -> eob.v1.ResourceDeleteRequest
-	16, // 27: eob.v1.EoBService.ResourceSchema:input_type -> eob.v1.ResourceSchemaRequest
-	19, // 28: eob.v1.EoBService.StreamList:input_type -> eob.v1.StreamListRequest
-	21, // 29: eob.v1.EoBService.StreamStats:input_type -> eob.v1.StreamStatsRequest
-	23, // 30: eob.v1.EoBService.StreamRead:input_type -> eob.v1.StreamReadRequest
-	2,  // 31: eob.v1.EoBService.ClusterIdentity:output_type -> eob.v1.ClusterIdentityResponse
-	7,  // 32: eob.v1.EoBService.EoBHealth:output_type -> eob.v1.EoBHealthResponse
-	9,  // 33: eob.v1.EoBService.ResourceList:output_type -> eob.v1.ResourceListResponse
-	11, // 34: eob.v1.EoBService.ResourceGet:output_type -> eob.v1.ResourceGetResponse
-	13, // 35: eob.v1.EoBService.ResourceApply:output_type -> eob.v1.ResourceApplyResponse
-	15, // 36: eob.v1.EoBService.ResourceDelete:output_type -> eob.v1.ResourceDeleteResponse
-	17, // 37: eob.v1.EoBService.ResourceSchema:output_type -> eob.v1.ResourceSchemaResponse
-	20, // 38: eob.v1.EoBService.StreamList:output_type -> eob.v1.StreamListResponse
-	22, // 39: eob.v1.EoBService.StreamStats:output_type -> eob.v1.StreamStatsResponse
-	25, // 40: eob.v1.EoBService.StreamRead:output_type -> eob.v1.StreamReadResponse
-	31, // [31:41] is the sub-list for method output_type
-	21, // [21:31] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	0,  // 19: eob.v1.HeartbeatResponse.cluster:type_name -> eob.v1.ClusterRef
+	28, // 20: eob.v1.BatchApplyRequest.items:type_name -> eob.v1.BatchApplyItem
+	0,  // 21: eob.v1.BatchApplyResponse.cluster:type_name -> eob.v1.ClusterRef
+	30, // 22: eob.v1.BatchApplyResponse.items:type_name -> eob.v1.BatchApplyResult
+	0,  // 23: eob.v1.WatchResourcesResponse.cluster:type_name -> eob.v1.ClusterRef
+	40, // 24: eob.v1.WatchResourcesResponse.object:type_name -> google.protobuf.Struct
+	0,  // 25: eob.v1.EventStreamResponse.cluster:type_name -> eob.v1.ClusterRef
+	0,  // 26: eob.v1.TailStreamResponse.cluster:type_name -> eob.v1.ClusterRef
+	24, // 27: eob.v1.TailStreamResponse.envelope:type_name -> eob.v1.RawEnvelope
+	4,  // 28: eob.v1.EoBHealthResponse.ComponentsEntry.value:type_name -> eob.v1.ComponentStatus
+	6,  // 29: eob.v1.EoBHealthResponse.AgentsPerNodeEntry.value:type_name -> eob.v1.NodeAgentSummary
+	1,  // 30: eob.v1.EoBService.ClusterIdentity:input_type -> eob.v1.ClusterIdentityRequest
+	3,  // 31: eob.v1.EoBService.EoBHealth:input_type -> eob.v1.EoBHealthRequest
+	8,  // 32: eob.v1.EoBService.ResourceList:input_type -> eob.v1.ResourceListRequest
+	10, // 33: eob.v1.EoBService.ResourceGet:input_type -> eob.v1.ResourceGetRequest
+	12, // 34: eob.v1.EoBService.ResourceApply:input_type -> eob.v1.ResourceApplyRequest
+	14, // 35: eob.v1.EoBService.ResourceDelete:input_type -> eob.v1.ResourceDeleteRequest
+	16, // 36: eob.v1.EoBService.ResourceSchema:input_type -> eob.v1.ResourceSchemaRequest
+	19, // 37: eob.v1.EoBService.StreamList:input_type -> eob.v1.StreamListRequest
+	21, // 38: eob.v1.EoBService.StreamStats:input_type -> eob.v1.StreamStatsRequest
+	23, // 39: eob.v1.EoBService.StreamRead:input_type -> eob.v1.StreamReadRequest
+	26, // 40: eob.v1.EoBService.Heartbeat:input_type -> eob.v1.HeartbeatRequest
+	29, // 41: eob.v1.EoBService.BatchApply:input_type -> eob.v1.BatchApplyRequest
+	32, // 42: eob.v1.EoBService.WatchResources:input_type -> eob.v1.WatchResourcesRequest
+	34, // 43: eob.v1.EoBService.EventStream:input_type -> eob.v1.EventStreamRequest
+	36, // 44: eob.v1.EoBService.TailStream:input_type -> eob.v1.TailStreamRequest
+	2,  // 45: eob.v1.EoBService.ClusterIdentity:output_type -> eob.v1.ClusterIdentityResponse
+	7,  // 46: eob.v1.EoBService.EoBHealth:output_type -> eob.v1.EoBHealthResponse
+	9,  // 47: eob.v1.EoBService.ResourceList:output_type -> eob.v1.ResourceListResponse
+	11, // 48: eob.v1.EoBService.ResourceGet:output_type -> eob.v1.ResourceGetResponse
+	13, // 49: eob.v1.EoBService.ResourceApply:output_type -> eob.v1.ResourceApplyResponse
+	15, // 50: eob.v1.EoBService.ResourceDelete:output_type -> eob.v1.ResourceDeleteResponse
+	17, // 51: eob.v1.EoBService.ResourceSchema:output_type -> eob.v1.ResourceSchemaResponse
+	20, // 52: eob.v1.EoBService.StreamList:output_type -> eob.v1.StreamListResponse
+	22, // 53: eob.v1.EoBService.StreamStats:output_type -> eob.v1.StreamStatsResponse
+	25, // 54: eob.v1.EoBService.StreamRead:output_type -> eob.v1.StreamReadResponse
+	27, // 55: eob.v1.EoBService.Heartbeat:output_type -> eob.v1.HeartbeatResponse
+	31, // 56: eob.v1.EoBService.BatchApply:output_type -> eob.v1.BatchApplyResponse
+	33, // 57: eob.v1.EoBService.WatchResources:output_type -> eob.v1.WatchResourcesResponse
+	35, // 58: eob.v1.EoBService.EventStream:output_type -> eob.v1.EventStreamResponse
+	37, // 59: eob.v1.EoBService.TailStream:output_type -> eob.v1.TailStreamResponse
+	45, // [45:60] is the sub-list for method output_type
+	30, // [30:45] is the sub-list for method input_type
+	30, // [30:30] is the sub-list for extension type_name
+	30, // [30:30] is the sub-list for extension extendee
+	0,  // [0:30] is the sub-list for field type_name
 }
 
 func init() { file_eob_v1_service_proto_init() }
@@ -2024,7 +3118,7 @@ func file_eob_v1_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_eob_v1_service_proto_rawDesc), len(file_eob_v1_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   28,
+			NumMessages:   40,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

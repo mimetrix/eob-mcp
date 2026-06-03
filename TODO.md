@@ -1,5 +1,54 @@
 # eob-mcp TODO
 
+## Phase 4 — federation RPCs (DONE 2026-06-03)
+
+Five new RPCs on the gRPC surface, motivated by the aggregator/fleet-
+console use case ("one UI driving N independent EoB sites"). All are
+gRPC-first; the MCP front door does not wrap them (streaming + batch
+semantics don't translate cleanly to MCP tool calls).
+
+- **Heartbeat** — unary, cheap liveness + drift. Returns site identity,
+  server clock, uptime, backend reachability, directive/stream counts,
+  build identity. Aggregator polls every ~30s.
+- **BatchApply** — unary, multi-manifest server-side apply. Per-item
+  independent (one failure doesn't abort the rest). Per-item `dry_run`
+  / `force` OR with the batch defaults.
+- **WatchResources** — server-streaming. Kubernetes-watch-shaped events
+  (`ADDED`/`MODIFIED`/`DELETED`/`BOOKMARK`/`ERROR`) for any Kind. Backed
+  by dynamic-client `Watch`, supports `AllowWatchBookmarks` for
+  resumable streams.
+- **EventStream** — server-streaming. Unifies k8s Events API + eob-mcp's
+  own audit events. New `internal/audit` package: in-memory broker
+  with non-blocking publish (slow subscribers drop) and per-sub cancel.
+  ResourceApply/Delete publish audit events; EventStream merges k8s +
+  audit sources.
+- **TailStream** — server-streaming companion to StreamRead. Live tail
+  via `streams.Reader.Tail` (new method) backed by an ordered ephemeral
+  JetStream consumer. DeliverPolicy chosen from `start_at_seq` /
+  `start_at_ts` / unset → DeliverNewPolicy.
+
+Deployed + smoke-tested on srikan-tf-test-0:
+- grpcurl reflection sees all 15 RPCs (10 originals + 5 new).
+- TailStream pulled 933 historical messages from `payload-coredns-l7`
+  without crashing; pod stayed up with 0 restarts.
+- WatchResources emitted ADDED events for the 2 existing
+  ClusterDirectives.
+- EventStream surfaced real k8s Events (`Normal`/`Warning`, `DaemonSetReady`,
+  `DaemonSetNotReady`) with the full federation envelope.
+- BatchApply round-tripped 2 dry-run items with independent per-item
+  status reporting.
+- Heartbeat returned cluster identity + uptime + counts in <10ms.
+
+Bug found and fixed during deploy:
+- `internal/streams/JSReader.Tail` callback raced with cleanup goroutine's
+  `close(ch)`, panicking with "send on closed channel" and crashing the
+  pod. Fixed with a `recover()` guard inside the send helper.
+
+RBAC additions made to support the new RPCs:
+- `events: list,watch` (EventStream's k8s Events watcher)
+- `watch` added to existing list-only verbs on
+  pods/services/daemonsets/etc. for WatchResources support beyond CRDs.
+
 ## Phase 1e — durable MCP connection (DONE 2026-06-02)
 
 Two flavors now ship under `scripts/dev/`:

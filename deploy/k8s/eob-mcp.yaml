@@ -54,20 +54,25 @@ metadata:
 rules:
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets"]
-    verbs: ["get"]
+    verbs: ["get", "watch"]
   - apiGroups: ["apps"]
     resources: ["daemonsets"]
-    verbs: ["get", "list"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["pods"]
-    verbs: ["list"]
-  # Streamstore Service auto-discovery (when EOB_NATS_URL is unset).
+    verbs: ["list", "watch"]
+  # Streamstore Service auto-discovery (when EOB_NATS_URL is unset)
+  # plus WatchResources support for Kind=Service.
   - apiGroups: [""]
     resources: ["services"]
-    verbs: ["list"]
+    verbs: ["list", "watch"]
+  # EventStream subscribes to the core Events API.
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch"]
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["mutatingwebhookconfigurations"]
-    verbs: ["get"]
+    verbs: ["get", "watch"]
   # Full CRUD on Tawon CRDs — enables resource_apply / resource_delete /
   # resource_get / resource_list for ClusterDirective, Dashboard,
   # StreamStore, Stream, DirectiveBinding, Directive, TopologyAggregator.

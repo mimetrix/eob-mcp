@@ -29,6 +29,35 @@ service EoBService {
   rpc StreamList(StreamListRequest) returns (StreamListResponse);
   rpc StreamStats(StreamStatsRequest) returns (StreamStatsResponse);
   rpc StreamRead(StreamReadRequest) returns (StreamReadResponse);
+
+  // ────────────────────────────────────────────────────────────────────
+  // Federation extensions — used by an aggregator (fleet console) that
+  // fans out across N independent EoB sites. These RPCs are gRPC-first;
+  // the MCP front door does not expose them (streaming + batch
+  // semantics don't map cleanly to MCP tool calls).
+  // ────────────────────────────────────────────────────────────────────
+
+  // Heartbeat is the cheap-polling liveness endpoint. Aggregator calls
+  // this every 30s against every site; richer RPCs only fire when
+  // heartbeat reports something off.
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+
+  // BatchApply applies many manifests in one call. Per-item independent:
+  // one failure does not abort the rest. Returns per-item status.
+  rpc BatchApply(BatchApplyRequest) returns (BatchApplyResponse);
+
+  // WatchResources streams kubernetes-watch-shaped events for a Kind so
+  // the aggregator does not poll. Closes on client cancel.
+  rpc WatchResources(WatchResourcesRequest) returns (stream WatchResourcesResponse);
+
+  // EventStream surfaces k8s Events + eob-mcp's own audit events as
+  // they happen. Includes resource_apply / resource_delete that the
+  // aggregator itself issued (closes the loop on what the fleet did).
+  rpc EventStream(EventStreamRequest) returns (stream EventStreamResponse);
+
+  // TailStream is the live-tail companion to StreamRead. Same envelope
+  // shape; pushed as messages arrive in JetStream rather than paged.
+  rpc TailStream(TailStreamRequest) returns (stream TailStreamResponse);
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -254,3 +283,164 @@ message StreamReadResponse {
   int32                count    = 3;
   repeated RawEnvelope messages = 4;
 }
+
+// ──────────────────────────────────────────────────────────────────────
+// Heartbeat — cheap liveness + drift detection
+// ──────────────────────────────────────────────────────────────────────
+
+message HeartbeatRequest {}
+
+message HeartbeatResponse {
+  ClusterRef cluster        = 1;
+  // RFC3339; aggregator computes its own clock skew against this.
+  string     server_time    = 2;
+  // Seconds since process start; resets on pod restart.
+  int64      uptime_seconds = 3;
+  // Backend reachability snapshots, observed by the most recent
+  // health-probe pass (not freshly re-tested for every Heartbeat).
+  bool       kube_reachable    = 4;
+  bool       streams_reachable = 5;
+  // Coarse counters useful for fleet dashboards.
+  int32      directive_count = 6;
+  int32      stream_count    = 7;
+  // Errors observed by the server's internal log handler in the last
+  // 24h (best-effort, may reset on restart). Aggregator uses this as
+  // a "drill in here" signal.
+  int32      error_count_24h = 8;
+  // Build identity — same fields as ClusterIdentity but kept here so
+  // Heartbeat is self-sufficient for fleet inventory.
+  string     mcp_version = 9;
+  string     eob_version = 10;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// BatchApply — multi-manifest apply with per-item status
+// ──────────────────────────────────────────────────────────────────────
+
+message BatchApplyItem {
+  // Same payload as ResourceApplyRequest.manifest. YAML or JSON.
+  string manifest = 1;
+  // Optional per-item override; when unset, falls back to the batch
+  // request's dry_run / force.
+  bool   dry_run  = 2;
+  bool   force    = 3;
+}
+
+message BatchApplyRequest {
+  repeated BatchApplyItem items = 1;
+  // Batch-level defaults; per-item flags override.
+  bool dry_run = 2;
+  bool force   = 3;
+}
+
+// status is one of: "applied" | "error".
+message BatchApplyResult {
+  string kind             = 1;
+  string api_group        = 2;
+  string namespace        = 3;
+  string name             = 4;
+  string status           = 5;
+  string error            = 6;
+  string uid              = 7;
+  string resource_version = 8;
+  int64  generation       = 9;
+  bool   dry_run          = 10;
+}
+
+message BatchApplyResponse {
+  ClusterRef                cluster = 1;
+  repeated BatchApplyResult items   = 2;
+  // Convenience counters; sum to items.length.
+  int32                     applied = 3;
+  int32                     errors  = 4;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// WatchResources — server-streaming k8s watch
+// ──────────────────────────────────────────────────────────────────────
+
+message WatchResourcesRequest {
+  string kind           = 1;
+  string api_group      = 2;
+  string namespace      = 3;
+  string label_selector = 4;
+  // Optional starting point. Empty → server picks a "list-then-watch"
+  // strategy (initial ADDED events for each existing object, then
+  // updates). Set to "0" for "watch latest only" semantics.
+  string resource_version = 5;
+}
+
+// event_type matches k8s watch: "ADDED" | "MODIFIED" | "DELETED" |
+// "BOOKMARK" | "ERROR". On BOOKMARK, object carries the current
+// resourceVersion only — useful for resumable streams.
+message WatchResourcesResponse {
+  ClusterRef             cluster          = 1;
+  string                 event_type       = 2;
+  string                 kind             = 3;
+  string                 api_group        = 4;
+  google.protobuf.Struct object           = 5;
+  // Convenience: top-level object metadata fields lifted out so
+  // aggregators can route without re-parsing object.
+  string                 namespace        = 6;
+  string                 name             = 7;
+  string                 resource_version = 8;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// EventStream — k8s Events + eob-mcp audit, unified
+// ──────────────────────────────────────────────────────────────────────
+
+message EventStreamRequest {
+  // Optional filters. Empty fields mean "all".
+  string namespace = 1;
+  // Filter by k8s involvedObject.kind. e.g. "ClusterDirective".
+  string kind      = 2;
+  // "k8s" | "audit" | "" (both). k8s = events API, audit = eob-mcp's
+  // own apply/delete trail.
+  string source    = 3;
+}
+
+// type is one of: "Normal" | "Warning" | "Audit". reason mirrors
+// k8s Events.reason for source=k8s; for source=audit it's one of
+// "ResourceApply" | "ResourceDelete" | "BatchApply".
+message EventStreamResponse {
+  ClusterRef cluster           = 1;
+  string     source            = 2; // "k8s" | "audit"
+  string     type              = 3;
+  string     reason            = 4;
+  string     message           = 5;
+  string     timestamp         = 6; // RFC3339
+  // Involved object — k8s Events.involvedObject, or the apply target
+  // for audit events.
+  string     involved_kind     = 7;
+  string     involved_name     = 8;
+  string     involved_namespace = 9;
+  // For source=audit: identity of the caller (mTLS subject or token
+  // claim) when available; empty otherwise. We do not invent identities.
+  string     actor             = 10;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// TailStream — live tail of a JetStream stream
+// ──────────────────────────────────────────────────────────────────────
+
+message TailStreamRequest {
+  string name = 1;
+  // jq filter, same semantics as StreamRead.filter.
+  string filter = 2;
+  // Optional starting point. Mutually exclusive; if both set,
+  // start_at_seq wins.
+  //   start_at_seq=0 + start_at_ts="" → deliver new messages only
+  //   start_at_seq=N                  → deliver from sequence N forward
+  //   start_at_ts=RFC3339             → deliver from that timestamp forward
+  uint64 start_at_seq = 3;
+  string start_at_ts  = 4;
+}
+
+// Wraps RawEnvelope so every streamed message carries the federation
+// envelope (ClusterRef) — same pattern as the unary responses.
+message TailStreamResponse {
+  ClusterRef  cluster  = 1;
+  RawEnvelope envelope = 2;
+}
+

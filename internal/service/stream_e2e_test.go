@@ -42,6 +42,21 @@ func (f *fakeStreams) Read(_ context.Context, name string, opts streams.ReadOpts
 	}
 	return all[:limit], nil
 }
+func (f *fakeStreams) Tail(ctx context.Context, name string, _ streams.TailOpts) (<-chan *streams.RawMessage, error) {
+	// Synchronously push the canned messages, then close on ctx cancel.
+	// Sufficient for service-layer tests that don't need real live-tail
+	// timing semantics — TailStream's runtime behavior is covered by
+	// the NATS-backed tests in internal/streams.
+	ch := make(chan *streams.RawMessage, len(f.msgs[name]))
+	for _, m := range f.msgs[name] {
+		ch <- m
+	}
+	go func() {
+		<-ctx.Done()
+		close(ch)
+	}()
+	return ch, nil
+}
 func (f *fakeStreams) Close() error { f.closed = true; return nil }
 
 func newServerWithStreams(streams streams.Reader) *Server {

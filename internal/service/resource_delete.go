@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	eobv1 "github.com/mimetrix/eob-mcp/gen/go/eob/v1"
+	"github.com/mimetrix/eob-mcp/internal/audit"
 )
 
 // ResourceDelete deletes a resource by Kind/name(+namespace). Idempotent:
@@ -30,6 +31,13 @@ func (s *Server) ResourceDelete(ctx context.Context, req *eobv1.ResourceDeleteRe
 	}
 	if err != nil {
 		if apierrors.IsNotFound(err) {
+			s.audit.Publish(&audit.Event{
+				Reason:            "ResourceDelete",
+				Message:           fmt.Sprintf("%s %q already absent", req.Kind, req.Name),
+				InvolvedKind:      req.Kind,
+				InvolvedName:      req.Name,
+				InvolvedNamespace: req.Namespace,
+			})
 			return &eobv1.ResourceDeleteResponse{
 				Cluster: s.clusterRef(),
 				Kind:    req.Kind,
@@ -37,8 +45,22 @@ func (s *Server) ResourceDelete(ctx context.Context, req *eobv1.ResourceDeleteRe
 				Status:  "notFound",
 			}, nil
 		}
+		s.audit.Publish(&audit.Event{
+			Reason:            "ResourceDelete",
+			Message:           fmt.Sprintf("delete %s %q failed: %v", req.Kind, req.Name, err),
+			InvolvedKind:      req.Kind,
+			InvolvedName:      req.Name,
+			InvolvedNamespace: req.Namespace,
+		})
 		return nil, fmt.Errorf("delete %s %q: %w", req.Kind, req.Name, err)
 	}
+	s.audit.Publish(&audit.Event{
+		Reason:            "ResourceDelete",
+		Message:           fmt.Sprintf("deleted %s %q", req.Kind, req.Name),
+		InvolvedKind:      req.Kind,
+		InvolvedName:      req.Name,
+		InvolvedNamespace: req.Namespace,
+	})
 	return &eobv1.ResourceDeleteResponse{
 		Cluster: s.clusterRef(),
 		Kind:    req.Kind,

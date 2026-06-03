@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	eobv1 "github.com/mimetrix/eob-mcp/gen/go/eob/v1"
+	"github.com/mimetrix/eob-mcp/internal/audit"
 )
 
 // ResourceApply applies a YAML/JSON manifest via Server-Side Apply.
@@ -70,8 +71,22 @@ func (s *Server) ResourceApply(ctx context.Context, req *eobv1.ResourceApplyRequ
 		applied, err = s.dyn.Dyn.Resource(gvr).Apply(callCtx, name, obj, applyOpts)
 	}
 	if err != nil {
+		s.audit.Publish(&audit.Event{
+			Reason:            "ResourceApply",
+			Message:           fmt.Sprintf("apply %s %q failed: %v", gvk.Kind, name, err),
+			InvolvedKind:      gvk.Kind,
+			InvolvedName:      name,
+			InvolvedNamespace: obj.GetNamespace(),
+		})
 		return nil, fmt.Errorf("apply %s %q: %w", gvk.Kind, name, err)
 	}
+	s.audit.Publish(&audit.Event{
+		Reason:            "ResourceApply",
+		Message:           fmt.Sprintf("applied %s %q (dryRun=%t, gen=%d)", gvk.Kind, name, req.DryRun, applied.GetGeneration()),
+		InvolvedKind:      gvk.Kind,
+		InvolvedName:      applied.GetName(),
+		InvolvedNamespace: applied.GetNamespace(),
+	})
 	return &eobv1.ResourceApplyResponse{
 		Cluster:         s.clusterRef(),
 		Kind:            gvk.Kind,

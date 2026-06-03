@@ -174,3 +174,126 @@ func TestJSReader_ReadReturnsEnvelopes(t *testing.T) {
 		t.Errorf("first.i: got %v, want 0", first["i"])
 	}
 }
+
+func TestJSReader_TailDeliversFromStartSeq(t *testing.T) {
+	t.Parallel()
+	url, stop := embeddedNATS(t)
+	t.Cleanup(stop)
+
+	envelopes := make([]map[string]any, 5)
+	for i := range envelopes {
+		envelopes[i] = map[string]any{"i": i}
+	}
+	seedStream(t, url, "test_tail_seq", envelopes)
+
+	r, err := DialJetStream(url)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	t.Cleanup(func() { _ = r.Close() })
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	ch, err := r.Tail(ctx, "test_tail_seq", TailOpts{StartAtSeq: 3, BufSize: 8})
+	if err != nil {
+		t.Fatalf("tail: %v", err)
+	}
+
+	// Expect messages 3, 4, 5 in sequence — then ctx times out.
+	var got []uint64
+	timeout := time.After(3 * time.Second)
+	for len(got) < 3 {
+		select {
+		case msg, ok := <-ch:
+			if !ok {
+				t.Fatalf("channel closed early; got=%v", got)
+			}
+			got = append(got, msg.Sequence)
+		case <-timeout:
+			t.Fatalf("timeout waiting for tail; got=%v", got)
+		}
+	}
+	if got[0] != 3 || got[1] != 4 || got[2] != 5 {
+		t.Errorf("sequences: got %v, want [3 4 5]", got)
+	}
+}
+
+func TestJSReader_TailDeliverNewSkipsHistory(t *testing.T) {
+	t.Parallel()
+	url, stop := embeddedNATS(t)
+	t.Cleanup(stop)
+
+	// Seed 3 messages BEFORE tail subscribes.
+	seedStream(t, url, "test_tail_new",
+		[]map[string]any{{"i": 0}, {"i": 1}, {"i": 2}})
+
+	r, err := DialJetStream(url)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	t.Cleanup(func() { _ = r.Close() })
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	ch, err := r.Tail(ctx, "test_tail_new", TailOpts{BufSize: 4})
+	if err != nil {
+		t.Fatalf("tail: %v", err)
+	}
+
+	// No new messages were published after subscription; channel should
+	// stay empty until either we publish new or ctx expires.
+	select {
+	case msg := <-ch:
+		t.Fatalf("got unexpected message with deliver-new: seq=%d", msg.Sequence)
+	case <-time.After(500 * time.Millisecond):
+		// expected — no history delivered
+	}
+
+	// Publish one new message; tail should deliver it.
+	seedStream(t, url, "test_tail_new", []map[string]any{{"i": 99}})
+
+	select {
+	case msg, ok := <-ch:
+		if !ok {
+			t.Fatal("channel closed before new message arrived")
+		}
+		if msg.Sequence != 4 {
+			t.Errorf("sequence: got %d, want 4", msg.Sequence)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for new message")
+	}
+}
+
+func TestJSReader_TailClosesOnCtxCancel(t *testing.T) {
+	t.Parallel()
+	url, stop := embeddedNATS(t)
+	t.Cleanup(stop)
+
+	seedStream(t, url, "test_tail_cancel", []map[string]any{{"i": 1}})
+
+	r, err := DialJetStream(url)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	t.Cleanup(func() { _ = r.Close() })
+
+	ctx, cancel := context.WithCancel(t.Context())
+	ch, err := r.Tail(ctx, "test_tail_cancel", TailOpts{StartAtSeq: 1})
+	if err != nil {
+		t.Fatalf("tail: %v", err)
+	}
+	cancel()
+	// Drain until close.
+	timeout := time.After(2 * time.Second)
+	for {
+		select {
+		case _, ok := <-ch:
+			if !ok {
+				return // channel closed — success
+			}
+		case <-timeout:
+			t.Fatal("channel did not close within 2s of cancel")
+		}
+	}
+}

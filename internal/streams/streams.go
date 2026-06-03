@@ -33,6 +33,14 @@ type Reader interface {
 	// envelope bytes — no decoding here.
 	Read(ctx context.Context, name string, opts ReadOpts) ([]*RawMessage, error)
 
+	// Tail streams messages from one stream as they arrive. The returned
+	// channel is closed when ctx is canceled or the consumer terminates;
+	// callers detect end via channel close. Errors during setup are
+	// returned synchronously; runtime errors are silent (the channel
+	// just closes). Implementations should honor opts.StartAtSeq or
+	// opts.StartAtTS when set (StartAtSeq wins if both are non-zero).
+	Tail(ctx context.Context, name string, opts TailOpts) (<-chan *RawMessage, error)
+
 	// Close releases the backend connection.
 	Close() error
 }
@@ -61,6 +69,17 @@ type ReadOpts struct {
 	Since time.Time // zero means deliver from the start
 	Until time.Time // zero means no upper bound
 	Limit int       // 0 means implementation default
+}
+
+// TailOpts narrows a Tail call. At most one of StartAtSeq / StartAtTS
+// should be set; StartAtSeq wins if both are. Both zero/empty means
+// "deliver new messages only" (DeliverNewPolicy).
+type TailOpts struct {
+	StartAtSeq uint64
+	StartAtTS  time.Time
+	// BufSize sets the channel buffer for backpressure tuning.
+	// 0 → implementation default (small but >1).
+	BufSize int
 }
 
 // RawMessage is one envelope as published by Tawon to JetStream. Data
