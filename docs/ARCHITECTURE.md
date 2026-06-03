@@ -5,6 +5,10 @@ more importantly, what it is not. Read it before adding an RPC, a
 package, or a dependency. If a proposed change does not match the
 scope below, it belongs in a different service.
 
+For **why** this scope (the customer-anchored rationale — VZW's
+AI-driven ops on MCP, ATT's federation aggregator on gRPC), see
+[`MOTIVATION.md`](MOTIVATION.md).
+
 ---
 
 ## The product, in one sentence

@@ -9,6 +9,12 @@ CRD CRUD) is shipping. The data plane (three stream RPCs over NATS
 JetStream) is next. Decode and aggregation are explicit non-goals —
 see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
+**Why this exists:** two named customer asks — VZW's internal AI
+effort (MCP front door) and ATT's multi-site federation (gRPC front
+door) — both served by one canonical service. See
+[`docs/MOTIVATION.md`](docs/MOTIVATION.md) for the customer-anchored
+rationale.
+
 ---
 
 ## What it is

@@ -10,6 +10,10 @@ service, and web UI are separate projects (likely separate repos) that
 consume `eob-mcp` over MCP. They're described here so the per-cluster
 server design stays compatible with the fleet target from day one.
 
+For the customer-anchored motivation behind both front doors (VZW's AI
+effort drives the MCP surface; ATT's multi-site console drives the
+gRPC surface), see [`docs/MOTIVATION.md`](docs/MOTIVATION.md).
+
 ---
 
 ## Why a fleet view
