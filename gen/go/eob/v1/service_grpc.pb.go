@@ -19,22 +19,23 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	EoBService_ClusterIdentity_FullMethodName = "/eob.v1.EoBService/ClusterIdentity"
-	EoBService_EoBHealth_FullMethodName       = "/eob.v1.EoBService/EoBHealth"
-	EoBService_TraceHealth_FullMethodName     = "/eob.v1.EoBService/TraceHealth"
-	EoBService_ResourceList_FullMethodName    = "/eob.v1.EoBService/ResourceList"
-	EoBService_ResourceGet_FullMethodName     = "/eob.v1.EoBService/ResourceGet"
-	EoBService_ResourceApply_FullMethodName   = "/eob.v1.EoBService/ResourceApply"
-	EoBService_ResourceDelete_FullMethodName  = "/eob.v1.EoBService/ResourceDelete"
-	EoBService_ResourceSchema_FullMethodName  = "/eob.v1.EoBService/ResourceSchema"
-	EoBService_StreamList_FullMethodName      = "/eob.v1.EoBService/StreamList"
-	EoBService_StreamStats_FullMethodName     = "/eob.v1.EoBService/StreamStats"
-	EoBService_StreamRead_FullMethodName      = "/eob.v1.EoBService/StreamRead"
-	EoBService_Heartbeat_FullMethodName       = "/eob.v1.EoBService/Heartbeat"
-	EoBService_BatchApply_FullMethodName      = "/eob.v1.EoBService/BatchApply"
-	EoBService_WatchResources_FullMethodName  = "/eob.v1.EoBService/WatchResources"
-	EoBService_EventStream_FullMethodName     = "/eob.v1.EoBService/EventStream"
-	EoBService_TailStream_FullMethodName      = "/eob.v1.EoBService/TailStream"
+	EoBService_ClusterIdentity_FullMethodName  = "/eob.v1.EoBService/ClusterIdentity"
+	EoBService_EoBHealth_FullMethodName        = "/eob.v1.EoBService/EoBHealth"
+	EoBService_TraceHealth_FullMethodName      = "/eob.v1.EoBService/TraceHealth"
+	EoBService_ResolveEndpoints_FullMethodName = "/eob.v1.EoBService/ResolveEndpoints"
+	EoBService_ResourceList_FullMethodName     = "/eob.v1.EoBService/ResourceList"
+	EoBService_ResourceGet_FullMethodName      = "/eob.v1.EoBService/ResourceGet"
+	EoBService_ResourceApply_FullMethodName    = "/eob.v1.EoBService/ResourceApply"
+	EoBService_ResourceDelete_FullMethodName   = "/eob.v1.EoBService/ResourceDelete"
+	EoBService_ResourceSchema_FullMethodName   = "/eob.v1.EoBService/ResourceSchema"
+	EoBService_StreamList_FullMethodName       = "/eob.v1.EoBService/StreamList"
+	EoBService_StreamStats_FullMethodName      = "/eob.v1.EoBService/StreamStats"
+	EoBService_StreamRead_FullMethodName       = "/eob.v1.EoBService/StreamRead"
+	EoBService_Heartbeat_FullMethodName        = "/eob.v1.EoBService/Heartbeat"
+	EoBService_BatchApply_FullMethodName       = "/eob.v1.EoBService/BatchApply"
+	EoBService_WatchResources_FullMethodName   = "/eob.v1.EoBService/WatchResources"
+	EoBService_EventStream_FullMethodName      = "/eob.v1.EoBService/EventStream"
+	EoBService_TailStream_FullMethodName       = "/eob.v1.EoBService/TailStream"
 )
 
 // EoBServiceClient is the client API for EoBService service.
@@ -56,6 +57,11 @@ type EoBServiceClient interface {
 	// EoB stack above). Presence-aware: components report "absent" when the
 	// defense namespaces/DaemonSets are not installed on this site.
 	TraceHealth(ctx context.Context, in *TraceHealthRequest, opts ...grpc.CallOption) (*TraceHealthResponse, error)
+	// Resolve IP[:port] endpoints to the owning Kubernetes workload +
+	// identity (pod -> owner workload + serviceAccount, or Service). Turns
+	// raw kernel flow tuples (TRACE east-west / MCP downstream-reach) into
+	// named, identity-tagged edges. Batch to amortize the cluster snapshot.
+	ResolveEndpoints(ctx context.Context, in *ResolveEndpointsRequest, opts ...grpc.CallOption) (*ResolveEndpointsResponse, error)
 	ResourceList(ctx context.Context, in *ResourceListRequest, opts ...grpc.CallOption) (*ResourceListResponse, error)
 	ResourceGet(ctx context.Context, in *ResourceGetRequest, opts ...grpc.CallOption) (*ResourceGetResponse, error)
 	ResourceApply(ctx context.Context, in *ResourceApplyRequest, opts ...grpc.CallOption) (*ResourceApplyResponse, error)
@@ -118,6 +124,16 @@ func (c *eoBServiceClient) TraceHealth(ctx context.Context, in *TraceHealthReque
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(TraceHealthResponse)
 	err := c.cc.Invoke(ctx, EoBService_TraceHealth_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eoBServiceClient) ResolveEndpoints(ctx context.Context, in *ResolveEndpointsRequest, opts ...grpc.CallOption) (*ResolveEndpointsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveEndpointsResponse)
+	err := c.cc.Invoke(ctx, EoBService_ResolveEndpoints_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -300,6 +316,11 @@ type EoBServiceServer interface {
 	// EoB stack above). Presence-aware: components report "absent" when the
 	// defense namespaces/DaemonSets are not installed on this site.
 	TraceHealth(context.Context, *TraceHealthRequest) (*TraceHealthResponse, error)
+	// Resolve IP[:port] endpoints to the owning Kubernetes workload +
+	// identity (pod -> owner workload + serviceAccount, or Service). Turns
+	// raw kernel flow tuples (TRACE east-west / MCP downstream-reach) into
+	// named, identity-tagged edges. Batch to amortize the cluster snapshot.
+	ResolveEndpoints(context.Context, *ResolveEndpointsRequest) (*ResolveEndpointsResponse, error)
 	ResourceList(context.Context, *ResourceListRequest) (*ResourceListResponse, error)
 	ResourceGet(context.Context, *ResourceGetRequest) (*ResourceGetResponse, error)
 	ResourceApply(context.Context, *ResourceApplyRequest) (*ResourceApplyResponse, error)
@@ -346,6 +367,9 @@ func (UnimplementedEoBServiceServer) EoBHealth(context.Context, *EoBHealthReques
 }
 func (UnimplementedEoBServiceServer) TraceHealth(context.Context, *TraceHealthRequest) (*TraceHealthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TraceHealth not implemented")
+}
+func (UnimplementedEoBServiceServer) ResolveEndpoints(context.Context, *ResolveEndpointsRequest) (*ResolveEndpointsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveEndpoints not implemented")
 }
 func (UnimplementedEoBServiceServer) ResourceList(context.Context, *ResourceListRequest) (*ResourceListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResourceList not implemented")
@@ -457,6 +481,24 @@ func _EoBService_TraceHealth_Handler(srv interface{}, ctx context.Context, dec f
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EoBServiceServer).TraceHealth(ctx, req.(*TraceHealthRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EoBService_ResolveEndpoints_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveEndpointsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EoBServiceServer).ResolveEndpoints(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EoBService_ResolveEndpoints_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EoBServiceServer).ResolveEndpoints(ctx, req.(*ResolveEndpointsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -692,6 +734,10 @@ var EoBService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TraceHealth",
 			Handler:    _EoBService_TraceHealth_Handler,
+		},
+		{
+			MethodName: "ResolveEndpoints",
+			Handler:    _EoBService_ResolveEndpoints_Handler,
 		},
 		{
 			MethodName: "ResourceList",

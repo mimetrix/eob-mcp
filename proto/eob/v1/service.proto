@@ -21,6 +21,11 @@ service EoBService {
   // EoB stack above). Presence-aware: components report "absent" when the
   // defense namespaces/DaemonSets are not installed on this site.
   rpc TraceHealth(TraceHealthRequest) returns (TraceHealthResponse);
+  // Resolve IP[:port] endpoints to the owning Kubernetes workload +
+  // identity (pod -> owner workload + serviceAccount, or Service). Turns
+  // raw kernel flow tuples (TRACE east-west / MCP downstream-reach) into
+  // named, identity-tagged edges. Batch to amortize the cluster snapshot.
+  rpc ResolveEndpoints(ResolveEndpointsRequest) returns (ResolveEndpointsResponse);
   rpc ResourceList(ResourceListRequest) returns (ResourceListResponse);
   rpc ResourceGet(ResourceGetRequest) returns (ResourceGetResponse);
   rpc ResourceApply(ResourceApplyRequest) returns (ResourceApplyResponse);
@@ -150,6 +155,37 @@ message TraceHealthResponse {
   map<string, NodeAgentSummary> agents_per_node = 3;
   // "connected" | "no-cluster" (same semantics as EoBHealth).
   string                        cluster_state   = 4;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// ResolveEndpoints — IP[:port] -> Kubernetes workload + identity
+// ──────────────────────────────────────────────────────────────────────
+
+message Endpoint {
+  string ip   = 1;
+  int32  port = 2;
+}
+
+message ResolveEndpointsRequest {
+  repeated Endpoint endpoints = 1;
+}
+
+message ResolvedEndpoint {
+  string ip              = 1;
+  int32  port            = 2;
+  // "pod" | "service" | "node" | "external"
+  string kind            = 3;
+  string name            = 4;  // pod / service / node name
+  string namespace       = 5;
+  string workload        = 6;  // owning controller name (Deployment/DaemonSet/…)
+  string workload_kind   = 7;
+  string service_account = 8;  // pods only
+}
+
+message ResolveEndpointsResponse {
+  ClusterRef                cluster       = 1;
+  repeated ResolvedEndpoint results       = 2;
+  string                    cluster_state = 3;
 }
 
 // ──────────────────────────────────────────────────────────────────────
