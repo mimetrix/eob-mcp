@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +33,8 @@ func (s *Server) ResolveEndpoints(ctx context.Context, req *eobv1.ResolveEndpoin
 	callCtx, cancel := context.WithTimeout(ctx, k8sCallTimeout)
 	defer cancel()
 
-	byPodIP := map[string]*eobv1.ResolvedEndpoint{}
+	byPodIP := map[string]*eobv1.ResolvedEndpoint{}   // pod-network pods, keyed by podIP
+	byHostPort := map[string]*eobv1.ResolvedEndpoint{} // hostNetwork pods, keyed by "nodeIP:port"
 	bySvcIP := map[string]*eobv1.ResolvedEndpoint{}
 	byNodeIP := map[string]*eobv1.ResolvedEndpoint{}
 
@@ -43,6 +45,21 @@ func (s *Server) ResolveEndpoints(ctx context.Context, req *eobv1.ResolveEndpoin
 			r := &eobv1.ResolvedEndpoint{
 				Kind: "pod", Name: p.Name, Namespace: p.Namespace,
 				Workload: wl, WorkloadKind: wlKind, ServiceAccount: p.Spec.ServiceAccountName,
+			}
+			// hostNetwork pods share the node IP, so IP alone is ambiguous —
+			// disambiguate by the ports their containers declare.
+			if p.Spec.HostNetwork {
+				for c := range p.Spec.Containers {
+					for _, port := range p.Spec.Containers[c].Ports {
+						if port.ContainerPort != 0 {
+							byHostPort[fmt.Sprintf("%s:%d", p.Status.HostIP, port.ContainerPort)] = r
+						}
+						if port.HostPort != 0 {
+							byHostPort[fmt.Sprintf("%s:%d", p.Status.HostIP, port.HostPort)] = r
+						}
+					}
+				}
+				continue
 			}
 			for _, pip := range p.Status.PodIPs {
 				if pip.IP != "" {
@@ -75,12 +92,16 @@ func (s *Server) ResolveEndpoints(ctx context.Context, req *eobv1.ResolveEndpoin
 
 	for _, ep := range req.GetEndpoints() {
 		out := &eobv1.ResolvedEndpoint{Ip: ep.GetIp(), Port: ep.GetPort(), Kind: "external"}
-		if r, ok := byPodIP[ep.GetIp()]; ok {
+		hostKey := fmt.Sprintf("%s:%d", ep.GetIp(), ep.GetPort())
+		if r, ok := byPodIP[ep.GetIp()]; ok { // pod-network pod
 			out.Kind, out.Name, out.Namespace = "pod", r.Name, r.Namespace
 			out.Workload, out.WorkloadKind, out.ServiceAccount = r.Workload, r.WorkloadKind, r.ServiceAccount
 		} else if r, ok := bySvcIP[ep.GetIp()]; ok {
 			out.Kind, out.Name, out.Namespace = "service", r.Name, r.Namespace
-		} else if r, ok := byNodeIP[ep.GetIp()]; ok {
+		} else if r, ok := byHostPort[hostKey]; ok { // hostNetwork pod, port-matched
+			out.Kind, out.Name, out.Namespace = "pod", r.Name, r.Namespace
+			out.Workload, out.WorkloadKind, out.ServiceAccount = r.Workload, r.WorkloadKind, r.ServiceAccount
+		} else if r, ok := byNodeIP[ep.GetIp()]; ok { // bare node (no matching hostNetwork port)
 			out.Kind, out.Name = "node", r.Name
 		}
 		resp.Results = append(resp.Results, out)
