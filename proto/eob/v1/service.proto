@@ -17,6 +17,10 @@ import "google/protobuf/struct.proto";
 service EoBService {
   rpc ClusterIdentity(ClusterIdentityRequest) returns (ClusterIdentityResponse);
   rpc EoBHealth(EoBHealthRequest) returns (EoBHealthResponse);
+  // Health of the co-resident RACE/TRACE defense stack (separate from the
+  // EoB stack above). Presence-aware: components report "absent" when the
+  // defense namespaces/DaemonSets are not installed on this site.
+  rpc TraceHealth(TraceHealthRequest) returns (TraceHealthResponse);
   rpc ResourceList(ResourceListRequest) returns (ResourceListResponse);
   rpc ResourceGet(ResourceGetRequest) returns (ResourceGetResponse);
   rpc ResourceApply(ResourceApplyRequest) returns (ResourceApplyResponse);
@@ -128,6 +132,24 @@ message EoBHealthResponse {
   // "no-cluster" (started without in-cluster or kubeconfig access). When
   // "no-cluster", components/directives/agents_per_node are empty.
   string                        cluster_state   = 5;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// TraceHealth — co-resident RACE/TRACE defense stack
+// ──────────────────────────────────────────────────────────────────────
+
+message TraceHealthRequest {}
+
+message TraceHealthResponse {
+  ClusterRef                    cluster         = 1;
+  // components keys: "trace_agent" (TRACE host-observation DaemonSet),
+  // "race_agent" (RACE perimeter-denial DaemonSet). Each "absent" when
+  // its namespace/DaemonSet is not installed.
+  map<string, ComponentStatus>  components      = 2;
+  // Per-node agent pod readiness, merged across both DaemonSets.
+  map<string, NodeAgentSummary> agents_per_node = 3;
+  // "connected" | "no-cluster" (same semantics as EoBHealth).
+  string                        cluster_state   = 4;
 }
 
 // ──────────────────────────────────────────────────────────────────────

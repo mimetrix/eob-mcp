@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	EoBService_ClusterIdentity_FullMethodName = "/eob.v1.EoBService/ClusterIdentity"
 	EoBService_EoBHealth_FullMethodName       = "/eob.v1.EoBService/EoBHealth"
+	EoBService_TraceHealth_FullMethodName     = "/eob.v1.EoBService/TraceHealth"
 	EoBService_ResourceList_FullMethodName    = "/eob.v1.EoBService/ResourceList"
 	EoBService_ResourceGet_FullMethodName     = "/eob.v1.EoBService/ResourceGet"
 	EoBService_ResourceApply_FullMethodName   = "/eob.v1.EoBService/ResourceApply"
@@ -51,6 +52,10 @@ const (
 type EoBServiceClient interface {
 	ClusterIdentity(ctx context.Context, in *ClusterIdentityRequest, opts ...grpc.CallOption) (*ClusterIdentityResponse, error)
 	EoBHealth(ctx context.Context, in *EoBHealthRequest, opts ...grpc.CallOption) (*EoBHealthResponse, error)
+	// Health of the co-resident RACE/TRACE defense stack (separate from the
+	// EoB stack above). Presence-aware: components report "absent" when the
+	// defense namespaces/DaemonSets are not installed on this site.
+	TraceHealth(ctx context.Context, in *TraceHealthRequest, opts ...grpc.CallOption) (*TraceHealthResponse, error)
 	ResourceList(ctx context.Context, in *ResourceListRequest, opts ...grpc.CallOption) (*ResourceListResponse, error)
 	ResourceGet(ctx context.Context, in *ResourceGetRequest, opts ...grpc.CallOption) (*ResourceGetResponse, error)
 	ResourceApply(ctx context.Context, in *ResourceApplyRequest, opts ...grpc.CallOption) (*ResourceApplyResponse, error)
@@ -103,6 +108,16 @@ func (c *eoBServiceClient) EoBHealth(ctx context.Context, in *EoBHealthRequest, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(EoBHealthResponse)
 	err := c.cc.Invoke(ctx, EoBService_EoBHealth_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eoBServiceClient) TraceHealth(ctx context.Context, in *TraceHealthRequest, opts ...grpc.CallOption) (*TraceHealthResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(TraceHealthResponse)
+	err := c.cc.Invoke(ctx, EoBService_TraceHealth_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -281,6 +296,10 @@ type EoBService_TailStreamClient = grpc.ServerStreamingClient[TailStreamResponse
 type EoBServiceServer interface {
 	ClusterIdentity(context.Context, *ClusterIdentityRequest) (*ClusterIdentityResponse, error)
 	EoBHealth(context.Context, *EoBHealthRequest) (*EoBHealthResponse, error)
+	// Health of the co-resident RACE/TRACE defense stack (separate from the
+	// EoB stack above). Presence-aware: components report "absent" when the
+	// defense namespaces/DaemonSets are not installed on this site.
+	TraceHealth(context.Context, *TraceHealthRequest) (*TraceHealthResponse, error)
 	ResourceList(context.Context, *ResourceListRequest) (*ResourceListResponse, error)
 	ResourceGet(context.Context, *ResourceGetRequest) (*ResourceGetResponse, error)
 	ResourceApply(context.Context, *ResourceApplyRequest) (*ResourceApplyResponse, error)
@@ -324,6 +343,9 @@ func (UnimplementedEoBServiceServer) ClusterIdentity(context.Context, *ClusterId
 }
 func (UnimplementedEoBServiceServer) EoBHealth(context.Context, *EoBHealthRequest) (*EoBHealthResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EoBHealth not implemented")
+}
+func (UnimplementedEoBServiceServer) TraceHealth(context.Context, *TraceHealthRequest) (*TraceHealthResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TraceHealth not implemented")
 }
 func (UnimplementedEoBServiceServer) ResourceList(context.Context, *ResourceListRequest) (*ResourceListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResourceList not implemented")
@@ -417,6 +439,24 @@ func _EoBService_EoBHealth_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EoBServiceServer).EoBHealth(ctx, req.(*EoBHealthRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EoBService_TraceHealth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TraceHealthRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EoBServiceServer).TraceHealth(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EoBService_TraceHealth_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EoBServiceServer).TraceHealth(ctx, req.(*TraceHealthRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -648,6 +688,10 @@ var EoBService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EoBHealth",
 			Handler:    _EoBService_EoBHealth_Handler,
+		},
+		{
+			MethodName: "TraceHealth",
+			Handler:    _EoBService_TraceHealth_Handler,
 		},
 		{
 			MethodName: "ResourceList",

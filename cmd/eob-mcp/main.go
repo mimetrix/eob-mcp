@@ -270,6 +270,7 @@ func buildMCPServer(svc *service.Server, haveDyn, haveStreams bool) (*mcp.Server
 	for _, t := range []mcp.ToolHandler{
 		tools.NewClusterIdentity(svc),
 		tools.NewEoBHealth(svc),
+		tools.NewTraceHealth(svc),
 	} {
 		if err := s.RegisterTool(t); err != nil {
 			return nil, err
