@@ -74,6 +74,11 @@ type Config struct {
 	//
 	//   nats://tawon-streamstore.tawon-operator.svc.cluster.local:4222
 	NATSURL string
+
+	// DefenseNATSURL is the TRACE/RACE defense bus (core pub/sub) carrying
+	// trace.events.*. Empty disables EastWestGraph (cluster_state
+	// "no-defense-bus"). Separate from NATSURL (the EoB streamstore).
+	DefenseNATSURL string
 }
 
 // FromEnv loads config from environment variables. Identity fields default
@@ -126,6 +131,7 @@ func FromEnv(mcpVersion string) *Config {
 		CRDAPIGroup:            envOrDefault("EOB_CRD_API_GROUP", defaultCRDAPIGroup),
 		FieldManager:           envOrDefault("EOB_FIELD_MANAGER", defaultFieldManager),
 		NATSURL:                os.Getenv("EOB_NATS_URL"),
+		DefenseNATSURL:         os.Getenv("EOB_DEFENSE_NATS_URL"),
 	}
 }
 

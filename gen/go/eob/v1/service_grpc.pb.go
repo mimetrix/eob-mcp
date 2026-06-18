@@ -23,6 +23,7 @@ const (
 	EoBService_EoBHealth_FullMethodName        = "/eob.v1.EoBService/EoBHealth"
 	EoBService_TraceHealth_FullMethodName      = "/eob.v1.EoBService/TraceHealth"
 	EoBService_ResolveEndpoints_FullMethodName = "/eob.v1.EoBService/ResolveEndpoints"
+	EoBService_EastWestGraph_FullMethodName    = "/eob.v1.EoBService/EastWestGraph"
 	EoBService_ResourceList_FullMethodName     = "/eob.v1.EoBService/ResourceList"
 	EoBService_ResourceGet_FullMethodName      = "/eob.v1.EoBService/ResourceGet"
 	EoBService_ResourceApply_FullMethodName    = "/eob.v1.EoBService/ResourceApply"
@@ -62,6 +63,11 @@ type EoBServiceClient interface {
 	// raw kernel flow tuples (TRACE east-west / MCP downstream-reach) into
 	// named, identity-tagged edges. Batch to amortize the cluster snapshot.
 	ResolveEndpoints(ctx context.Context, in *ResolveEndpointsRequest, opts ...grpc.CallOption) (*ResolveEndpointsResponse, error)
+	// Sample the TRACE defense bus for a window and return the east-west
+	// service-call graph with every edge resolved to named, identity-tagged
+	// workloads. One call = tap + aggregate + resolve. Requires the defense
+	// NATS bus to be configured (else cluster_state="no-defense-bus").
+	EastWestGraph(ctx context.Context, in *EastWestGraphRequest, opts ...grpc.CallOption) (*EastWestGraphResponse, error)
 	ResourceList(ctx context.Context, in *ResourceListRequest, opts ...grpc.CallOption) (*ResourceListResponse, error)
 	ResourceGet(ctx context.Context, in *ResourceGetRequest, opts ...grpc.CallOption) (*ResourceGetResponse, error)
 	ResourceApply(ctx context.Context, in *ResourceApplyRequest, opts ...grpc.CallOption) (*ResourceApplyResponse, error)
@@ -134,6 +140,16 @@ func (c *eoBServiceClient) ResolveEndpoints(ctx context.Context, in *ResolveEndp
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResolveEndpointsResponse)
 	err := c.cc.Invoke(ctx, EoBService_ResolveEndpoints_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *eoBServiceClient) EastWestGraph(ctx context.Context, in *EastWestGraphRequest, opts ...grpc.CallOption) (*EastWestGraphResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EastWestGraphResponse)
+	err := c.cc.Invoke(ctx, EoBService_EastWestGraph_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -321,6 +337,11 @@ type EoBServiceServer interface {
 	// raw kernel flow tuples (TRACE east-west / MCP downstream-reach) into
 	// named, identity-tagged edges. Batch to amortize the cluster snapshot.
 	ResolveEndpoints(context.Context, *ResolveEndpointsRequest) (*ResolveEndpointsResponse, error)
+	// Sample the TRACE defense bus for a window and return the east-west
+	// service-call graph with every edge resolved to named, identity-tagged
+	// workloads. One call = tap + aggregate + resolve. Requires the defense
+	// NATS bus to be configured (else cluster_state="no-defense-bus").
+	EastWestGraph(context.Context, *EastWestGraphRequest) (*EastWestGraphResponse, error)
 	ResourceList(context.Context, *ResourceListRequest) (*ResourceListResponse, error)
 	ResourceGet(context.Context, *ResourceGetRequest) (*ResourceGetResponse, error)
 	ResourceApply(context.Context, *ResourceApplyRequest) (*ResourceApplyResponse, error)
@@ -370,6 +391,9 @@ func (UnimplementedEoBServiceServer) TraceHealth(context.Context, *TraceHealthRe
 }
 func (UnimplementedEoBServiceServer) ResolveEndpoints(context.Context, *ResolveEndpointsRequest) (*ResolveEndpointsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveEndpoints not implemented")
+}
+func (UnimplementedEoBServiceServer) EastWestGraph(context.Context, *EastWestGraphRequest) (*EastWestGraphResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EastWestGraph not implemented")
 }
 func (UnimplementedEoBServiceServer) ResourceList(context.Context, *ResourceListRequest) (*ResourceListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResourceList not implemented")
@@ -499,6 +523,24 @@ func _EoBService_ResolveEndpoints_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(EoBServiceServer).ResolveEndpoints(ctx, req.(*ResolveEndpointsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EoBService_EastWestGraph_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EastWestGraphRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EoBServiceServer).EastWestGraph(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EoBService_EastWestGraph_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EoBServiceServer).EastWestGraph(ctx, req.(*EastWestGraphRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -738,6 +780,10 @@ var EoBService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResolveEndpoints",
 			Handler:    _EoBService_ResolveEndpoints_Handler,
+		},
+		{
+			MethodName: "EastWestGraph",
+			Handler:    _EoBService_EastWestGraph_Handler,
 		},
 		{
 			MethodName: "ResourceList",

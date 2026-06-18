@@ -26,6 +26,11 @@ service EoBService {
   // raw kernel flow tuples (TRACE east-west / MCP downstream-reach) into
   // named, identity-tagged edges. Batch to amortize the cluster snapshot.
   rpc ResolveEndpoints(ResolveEndpointsRequest) returns (ResolveEndpointsResponse);
+  // Sample the TRACE defense bus for a window and return the east-west
+  // service-call graph with every edge resolved to named, identity-tagged
+  // workloads. One call = tap + aggregate + resolve. Requires the defense
+  // NATS bus to be configured (else cluster_state="no-defense-bus").
+  rpc EastWestGraph(EastWestGraphRequest) returns (EastWestGraphResponse);
   rpc ResourceList(ResourceListRequest) returns (ResourceListResponse);
   rpc ResourceGet(ResourceGetRequest) returns (ResourceGetResponse);
   rpc ResourceApply(ResourceApplyRequest) returns (ResourceApplyResponse);
@@ -186,6 +191,39 @@ message ResolveEndpointsResponse {
   ClusterRef                cluster       = 1;
   repeated ResolvedEndpoint results       = 2;
   string                    cluster_state = 3;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// EastWestGraph — sampled, resolved service-call graph
+// ──────────────────────────────────────────────────────────────────────
+
+message EastWestGraphRequest {
+  int32 window_seconds = 1;  // sample window (default 10, clamped)
+  int32 max_edges      = 2;  // cap returned edges (default 50)
+}
+
+message EastWestEdge {
+  // Source = the connecting process (from the TRACE event's record).
+  string src_namespace      = 1;
+  string src_name           = 2;  // pod name or process comm
+  // Destination, resolved to a workload.
+  string dst_ip             = 3;
+  int32  dst_port           = 4;
+  string dst_kind           = 5;  // pod|service|node|external
+  string dst_name           = 6;
+  string dst_namespace      = 7;
+  string dst_workload       = 8;
+  string dst_service_account = 9;
+  int64  count              = 10;
+}
+
+message EastWestGraphResponse {
+  ClusterRef            cluster        = 1;
+  repeated EastWestEdge edges          = 2;
+  int32                 window_seconds = 3;
+  int64                 events_seen    = 4;
+  // "connected" | "no-defense-bus" (not configured) | "no-cluster"
+  string                cluster_state  = 5;
 }
 
 // ──────────────────────────────────────────────────────────────────────

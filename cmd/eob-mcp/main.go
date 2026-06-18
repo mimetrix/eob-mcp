@@ -272,6 +272,7 @@ func buildMCPServer(svc *service.Server, haveDyn, haveStreams bool) (*mcp.Server
 		tools.NewEoBHealth(svc),
 		tools.NewTraceHealth(svc),
 		tools.NewResolveEndpoints(svc),
+		tools.NewEastWestGraph(svc),
 	} {
 		if err := s.RegisterTool(t); err != nil {
 			return nil, err

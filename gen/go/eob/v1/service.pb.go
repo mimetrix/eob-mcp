@@ -873,6 +873,253 @@ func (x *ResolveEndpointsResponse) GetClusterState() string {
 	return ""
 }
 
+type EastWestGraphRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	WindowSeconds int32                  `protobuf:"varint,1,opt,name=window_seconds,json=windowSeconds,proto3" json:"window_seconds,omitempty"` // sample window (default 10, clamped)
+	MaxEdges      int32                  `protobuf:"varint,2,opt,name=max_edges,json=maxEdges,proto3" json:"max_edges,omitempty"`                // cap returned edges (default 50)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EastWestGraphRequest) Reset() {
+	*x = EastWestGraphRequest{}
+	mi := &file_eob_v1_service_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EastWestGraphRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EastWestGraphRequest) ProtoMessage() {}
+
+func (x *EastWestGraphRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EastWestGraphRequest.ProtoReflect.Descriptor instead.
+func (*EastWestGraphRequest) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *EastWestGraphRequest) GetWindowSeconds() int32 {
+	if x != nil {
+		return x.WindowSeconds
+	}
+	return 0
+}
+
+func (x *EastWestGraphRequest) GetMaxEdges() int32 {
+	if x != nil {
+		return x.MaxEdges
+	}
+	return 0
+}
+
+type EastWestEdge struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Source = the connecting process (from the TRACE event's record).
+	SrcNamespace string `protobuf:"bytes,1,opt,name=src_namespace,json=srcNamespace,proto3" json:"src_namespace,omitempty"`
+	SrcName      string `protobuf:"bytes,2,opt,name=src_name,json=srcName,proto3" json:"src_name,omitempty"` // pod name or process comm
+	// Destination, resolved to a workload.
+	DstIp             string `protobuf:"bytes,3,opt,name=dst_ip,json=dstIp,proto3" json:"dst_ip,omitempty"`
+	DstPort           int32  `protobuf:"varint,4,opt,name=dst_port,json=dstPort,proto3" json:"dst_port,omitempty"`
+	DstKind           string `protobuf:"bytes,5,opt,name=dst_kind,json=dstKind,proto3" json:"dst_kind,omitempty"` // pod|service|node|external
+	DstName           string `protobuf:"bytes,6,opt,name=dst_name,json=dstName,proto3" json:"dst_name,omitempty"`
+	DstNamespace      string `protobuf:"bytes,7,opt,name=dst_namespace,json=dstNamespace,proto3" json:"dst_namespace,omitempty"`
+	DstWorkload       string `protobuf:"bytes,8,opt,name=dst_workload,json=dstWorkload,proto3" json:"dst_workload,omitempty"`
+	DstServiceAccount string `protobuf:"bytes,9,opt,name=dst_service_account,json=dstServiceAccount,proto3" json:"dst_service_account,omitempty"`
+	Count             int64  `protobuf:"varint,10,opt,name=count,proto3" json:"count,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *EastWestEdge) Reset() {
+	*x = EastWestEdge{}
+	mi := &file_eob_v1_service_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EastWestEdge) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EastWestEdge) ProtoMessage() {}
+
+func (x *EastWestEdge) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EastWestEdge.ProtoReflect.Descriptor instead.
+func (*EastWestEdge) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *EastWestEdge) GetSrcNamespace() string {
+	if x != nil {
+		return x.SrcNamespace
+	}
+	return ""
+}
+
+func (x *EastWestEdge) GetSrcName() string {
+	if x != nil {
+		return x.SrcName
+	}
+	return ""
+}
+
+func (x *EastWestEdge) GetDstIp() string {
+	if x != nil {
+		return x.DstIp
+	}
+	return ""
+}
+
+func (x *EastWestEdge) GetDstPort() int32 {
+	if x != nil {
+		return x.DstPort
+	}
+	return 0
+}
+
+func (x *EastWestEdge) GetDstKind() string {
+	if x != nil {
+		return x.DstKind
+	}
+	return ""
+}
+
+func (x *EastWestEdge) GetDstName() string {
+	if x != nil {
+		return x.DstName
+	}
+	return ""
+}
+
+func (x *EastWestEdge) GetDstNamespace() string {
+	if x != nil {
+		return x.DstNamespace
+	}
+	return ""
+}
+
+func (x *EastWestEdge) GetDstWorkload() string {
+	if x != nil {
+		return x.DstWorkload
+	}
+	return ""
+}
+
+func (x *EastWestEdge) GetDstServiceAccount() string {
+	if x != nil {
+		return x.DstServiceAccount
+	}
+	return ""
+}
+
+func (x *EastWestEdge) GetCount() int64 {
+	if x != nil {
+		return x.Count
+	}
+	return 0
+}
+
+type EastWestGraphResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Cluster       *ClusterRef            `protobuf:"bytes,1,opt,name=cluster,proto3" json:"cluster,omitempty"`
+	Edges         []*EastWestEdge        `protobuf:"bytes,2,rep,name=edges,proto3" json:"edges,omitempty"`
+	WindowSeconds int32                  `protobuf:"varint,3,opt,name=window_seconds,json=windowSeconds,proto3" json:"window_seconds,omitempty"`
+	EventsSeen    int64                  `protobuf:"varint,4,opt,name=events_seen,json=eventsSeen,proto3" json:"events_seen,omitempty"`
+	// "connected" | "no-defense-bus" (not configured) | "no-cluster"
+	ClusterState  string `protobuf:"bytes,5,opt,name=cluster_state,json=clusterState,proto3" json:"cluster_state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EastWestGraphResponse) Reset() {
+	*x = EastWestGraphResponse{}
+	mi := &file_eob_v1_service_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EastWestGraphResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EastWestGraphResponse) ProtoMessage() {}
+
+func (x *EastWestGraphResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_eob_v1_service_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EastWestGraphResponse.ProtoReflect.Descriptor instead.
+func (*EastWestGraphResponse) Descriptor() ([]byte, []int) {
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *EastWestGraphResponse) GetCluster() *ClusterRef {
+	if x != nil {
+		return x.Cluster
+	}
+	return nil
+}
+
+func (x *EastWestGraphResponse) GetEdges() []*EastWestEdge {
+	if x != nil {
+		return x.Edges
+	}
+	return nil
+}
+
+func (x *EastWestGraphResponse) GetWindowSeconds() int32 {
+	if x != nil {
+		return x.WindowSeconds
+	}
+	return 0
+}
+
+func (x *EastWestGraphResponse) GetEventsSeen() int64 {
+	if x != nil {
+		return x.EventsSeen
+	}
+	return 0
+}
+
+func (x *EastWestGraphResponse) GetClusterState() string {
+	if x != nil {
+		return x.ClusterState
+	}
+	return ""
+}
+
 type ResourceListRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
@@ -885,7 +1132,7 @@ type ResourceListRequest struct {
 
 func (x *ResourceListRequest) Reset() {
 	*x = ResourceListRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[14]
+	mi := &file_eob_v1_service_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -897,7 +1144,7 @@ func (x *ResourceListRequest) String() string {
 func (*ResourceListRequest) ProtoMessage() {}
 
 func (x *ResourceListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[14]
+	mi := &file_eob_v1_service_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -910,7 +1157,7 @@ func (x *ResourceListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceListRequest.ProtoReflect.Descriptor instead.
 func (*ResourceListRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{14}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ResourceListRequest) GetKind() string {
@@ -956,7 +1203,7 @@ type ResourceListResponse struct {
 
 func (x *ResourceListResponse) Reset() {
 	*x = ResourceListResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[15]
+	mi := &file_eob_v1_service_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -968,7 +1215,7 @@ func (x *ResourceListResponse) String() string {
 func (*ResourceListResponse) ProtoMessage() {}
 
 func (x *ResourceListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[15]
+	mi := &file_eob_v1_service_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -981,7 +1228,7 @@ func (x *ResourceListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceListResponse.ProtoReflect.Descriptor instead.
 func (*ResourceListResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{15}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ResourceListResponse) GetCluster() *ClusterRef {
@@ -1038,7 +1285,7 @@ type ResourceGetRequest struct {
 
 func (x *ResourceGetRequest) Reset() {
 	*x = ResourceGetRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[16]
+	mi := &file_eob_v1_service_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1050,7 +1297,7 @@ func (x *ResourceGetRequest) String() string {
 func (*ResourceGetRequest) ProtoMessage() {}
 
 func (x *ResourceGetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[16]
+	mi := &file_eob_v1_service_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1063,7 +1310,7 @@ func (x *ResourceGetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceGetRequest.ProtoReflect.Descriptor instead.
 func (*ResourceGetRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{16}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ResourceGetRequest) GetKind() string {
@@ -1105,7 +1352,7 @@ type ResourceGetResponse struct {
 
 func (x *ResourceGetResponse) Reset() {
 	*x = ResourceGetResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[17]
+	mi := &file_eob_v1_service_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1117,7 +1364,7 @@ func (x *ResourceGetResponse) String() string {
 func (*ResourceGetResponse) ProtoMessage() {}
 
 func (x *ResourceGetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[17]
+	mi := &file_eob_v1_service_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1130,7 +1377,7 @@ func (x *ResourceGetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceGetResponse.ProtoReflect.Descriptor instead.
 func (*ResourceGetResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{17}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ResourceGetResponse) GetCluster() *ClusterRef {
@@ -1158,7 +1405,7 @@ type ResourceApplyRequest struct {
 
 func (x *ResourceApplyRequest) Reset() {
 	*x = ResourceApplyRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[18]
+	mi := &file_eob_v1_service_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1170,7 +1417,7 @@ func (x *ResourceApplyRequest) String() string {
 func (*ResourceApplyRequest) ProtoMessage() {}
 
 func (x *ResourceApplyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[18]
+	mi := &file_eob_v1_service_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1183,7 +1430,7 @@ func (x *ResourceApplyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceApplyRequest.ProtoReflect.Descriptor instead.
 func (*ResourceApplyRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{18}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ResourceApplyRequest) GetManifest() string {
@@ -1225,7 +1472,7 @@ type ResourceApplyResponse struct {
 
 func (x *ResourceApplyResponse) Reset() {
 	*x = ResourceApplyResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[19]
+	mi := &file_eob_v1_service_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1237,7 +1484,7 @@ func (x *ResourceApplyResponse) String() string {
 func (*ResourceApplyResponse) ProtoMessage() {}
 
 func (x *ResourceApplyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[19]
+	mi := &file_eob_v1_service_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1250,7 +1497,7 @@ func (x *ResourceApplyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceApplyResponse.ProtoReflect.Descriptor instead.
 func (*ResourceApplyResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{19}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ResourceApplyResponse) GetCluster() *ClusterRef {
@@ -1335,7 +1582,7 @@ type ResourceDeleteRequest struct {
 
 func (x *ResourceDeleteRequest) Reset() {
 	*x = ResourceDeleteRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[20]
+	mi := &file_eob_v1_service_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1347,7 +1594,7 @@ func (x *ResourceDeleteRequest) String() string {
 func (*ResourceDeleteRequest) ProtoMessage() {}
 
 func (x *ResourceDeleteRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[20]
+	mi := &file_eob_v1_service_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1360,7 +1607,7 @@ func (x *ResourceDeleteRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceDeleteRequest.ProtoReflect.Descriptor instead.
 func (*ResourceDeleteRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{20}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ResourceDeleteRequest) GetKind() string {
@@ -1404,7 +1651,7 @@ type ResourceDeleteResponse struct {
 
 func (x *ResourceDeleteResponse) Reset() {
 	*x = ResourceDeleteResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[21]
+	mi := &file_eob_v1_service_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1416,7 +1663,7 @@ func (x *ResourceDeleteResponse) String() string {
 func (*ResourceDeleteResponse) ProtoMessage() {}
 
 func (x *ResourceDeleteResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[21]
+	mi := &file_eob_v1_service_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1429,7 +1676,7 @@ func (x *ResourceDeleteResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceDeleteResponse.ProtoReflect.Descriptor instead.
 func (*ResourceDeleteResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{21}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ResourceDeleteResponse) GetCluster() *ClusterRef {
@@ -1470,7 +1717,7 @@ type ResourceSchemaRequest struct {
 
 func (x *ResourceSchemaRequest) Reset() {
 	*x = ResourceSchemaRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[22]
+	mi := &file_eob_v1_service_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1482,7 +1729,7 @@ func (x *ResourceSchemaRequest) String() string {
 func (*ResourceSchemaRequest) ProtoMessage() {}
 
 func (x *ResourceSchemaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[22]
+	mi := &file_eob_v1_service_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1495,7 +1742,7 @@ func (x *ResourceSchemaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceSchemaRequest.ProtoReflect.Descriptor instead.
 func (*ResourceSchemaRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{22}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ResourceSchemaRequest) GetKind() string {
@@ -1525,7 +1772,7 @@ type ResourceSchemaResponse struct {
 
 func (x *ResourceSchemaResponse) Reset() {
 	*x = ResourceSchemaResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[23]
+	mi := &file_eob_v1_service_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1537,7 +1784,7 @@ func (x *ResourceSchemaResponse) String() string {
 func (*ResourceSchemaResponse) ProtoMessage() {}
 
 func (x *ResourceSchemaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[23]
+	mi := &file_eob_v1_service_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1550,7 +1797,7 @@ func (x *ResourceSchemaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResourceSchemaResponse.ProtoReflect.Descriptor instead.
 func (*ResourceSchemaResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{23}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ResourceSchemaResponse) GetCluster() *ClusterRef {
@@ -1603,7 +1850,7 @@ type StreamInfo struct {
 
 func (x *StreamInfo) Reset() {
 	*x = StreamInfo{}
-	mi := &file_eob_v1_service_proto_msgTypes[24]
+	mi := &file_eob_v1_service_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1615,7 +1862,7 @@ func (x *StreamInfo) String() string {
 func (*StreamInfo) ProtoMessage() {}
 
 func (x *StreamInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[24]
+	mi := &file_eob_v1_service_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1628,7 +1875,7 @@ func (x *StreamInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamInfo.ProtoReflect.Descriptor instead.
 func (*StreamInfo) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{24}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *StreamInfo) GetName() string {
@@ -1674,7 +1921,7 @@ type StreamListRequest struct {
 
 func (x *StreamListRequest) Reset() {
 	*x = StreamListRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[25]
+	mi := &file_eob_v1_service_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1686,7 +1933,7 @@ func (x *StreamListRequest) String() string {
 func (*StreamListRequest) ProtoMessage() {}
 
 func (x *StreamListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[25]
+	mi := &file_eob_v1_service_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1699,7 +1946,7 @@ func (x *StreamListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamListRequest.ProtoReflect.Descriptor instead.
 func (*StreamListRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{25}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{28}
 }
 
 type StreamListResponse struct {
@@ -1712,7 +1959,7 @@ type StreamListResponse struct {
 
 func (x *StreamListResponse) Reset() {
 	*x = StreamListResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[26]
+	mi := &file_eob_v1_service_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1724,7 +1971,7 @@ func (x *StreamListResponse) String() string {
 func (*StreamListResponse) ProtoMessage() {}
 
 func (x *StreamListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[26]
+	mi := &file_eob_v1_service_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1737,7 +1984,7 @@ func (x *StreamListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamListResponse.ProtoReflect.Descriptor instead.
 func (*StreamListResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{26}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *StreamListResponse) GetCluster() *ClusterRef {
@@ -1766,7 +2013,7 @@ type StreamStatsRequest struct {
 
 func (x *StreamStatsRequest) Reset() {
 	*x = StreamStatsRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[27]
+	mi := &file_eob_v1_service_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1778,7 +2025,7 @@ func (x *StreamStatsRequest) String() string {
 func (*StreamStatsRequest) ProtoMessage() {}
 
 func (x *StreamStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[27]
+	mi := &file_eob_v1_service_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1791,7 +2038,7 @@ func (x *StreamStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamStatsRequest.ProtoReflect.Descriptor instead.
 func (*StreamStatsRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{27}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *StreamStatsRequest) GetName() string {
@@ -1829,7 +2076,7 @@ type StreamStatsResponse struct {
 
 func (x *StreamStatsResponse) Reset() {
 	*x = StreamStatsResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[28]
+	mi := &file_eob_v1_service_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1841,7 +2088,7 @@ func (x *StreamStatsResponse) String() string {
 func (*StreamStatsResponse) ProtoMessage() {}
 
 func (x *StreamStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[28]
+	mi := &file_eob_v1_service_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1854,7 +2101,7 @@ func (x *StreamStatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamStatsResponse.ProtoReflect.Descriptor instead.
 func (*StreamStatsResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{28}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *StreamStatsResponse) GetCluster() *ClusterRef {
@@ -1919,7 +2166,7 @@ type StreamReadRequest struct {
 
 func (x *StreamReadRequest) Reset() {
 	*x = StreamReadRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[29]
+	mi := &file_eob_v1_service_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1931,7 +2178,7 @@ func (x *StreamReadRequest) String() string {
 func (*StreamReadRequest) ProtoMessage() {}
 
 func (x *StreamReadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[29]
+	mi := &file_eob_v1_service_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1944,7 +2191,7 @@ func (x *StreamReadRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamReadRequest.ProtoReflect.Descriptor instead.
 func (*StreamReadRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{29}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *StreamReadRequest) GetName() string {
@@ -1998,7 +2245,7 @@ type RawEnvelope struct {
 
 func (x *RawEnvelope) Reset() {
 	*x = RawEnvelope{}
-	mi := &file_eob_v1_service_proto_msgTypes[30]
+	mi := &file_eob_v1_service_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2010,7 +2257,7 @@ func (x *RawEnvelope) String() string {
 func (*RawEnvelope) ProtoMessage() {}
 
 func (x *RawEnvelope) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[30]
+	mi := &file_eob_v1_service_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2023,7 +2270,7 @@ func (x *RawEnvelope) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RawEnvelope.ProtoReflect.Descriptor instead.
 func (*RawEnvelope) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{30}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *RawEnvelope) GetSubject() string {
@@ -2066,7 +2313,7 @@ type StreamReadResponse struct {
 
 func (x *StreamReadResponse) Reset() {
 	*x = StreamReadResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[31]
+	mi := &file_eob_v1_service_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2078,7 +2325,7 @@ func (x *StreamReadResponse) String() string {
 func (*StreamReadResponse) ProtoMessage() {}
 
 func (x *StreamReadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[31]
+	mi := &file_eob_v1_service_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2091,7 +2338,7 @@ func (x *StreamReadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamReadResponse.ProtoReflect.Descriptor instead.
 func (*StreamReadResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{31}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *StreamReadResponse) GetCluster() *ClusterRef {
@@ -2130,7 +2377,7 @@ type HeartbeatRequest struct {
 
 func (x *HeartbeatRequest) Reset() {
 	*x = HeartbeatRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[32]
+	mi := &file_eob_v1_service_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2142,7 +2389,7 @@ func (x *HeartbeatRequest) String() string {
 func (*HeartbeatRequest) ProtoMessage() {}
 
 func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[32]
+	mi := &file_eob_v1_service_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2155,7 +2402,7 @@ func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatRequest.ProtoReflect.Descriptor instead.
 func (*HeartbeatRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{32}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{35}
 }
 
 type HeartbeatResponse struct {
@@ -2186,7 +2433,7 @@ type HeartbeatResponse struct {
 
 func (x *HeartbeatResponse) Reset() {
 	*x = HeartbeatResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[33]
+	mi := &file_eob_v1_service_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2198,7 +2445,7 @@ func (x *HeartbeatResponse) String() string {
 func (*HeartbeatResponse) ProtoMessage() {}
 
 func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[33]
+	mi := &file_eob_v1_service_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2211,7 +2458,7 @@ func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeartbeatResponse.ProtoReflect.Descriptor instead.
 func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{33}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *HeartbeatResponse) GetCluster() *ClusterRef {
@@ -2298,7 +2545,7 @@ type BatchApplyItem struct {
 
 func (x *BatchApplyItem) Reset() {
 	*x = BatchApplyItem{}
-	mi := &file_eob_v1_service_proto_msgTypes[34]
+	mi := &file_eob_v1_service_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2310,7 +2557,7 @@ func (x *BatchApplyItem) String() string {
 func (*BatchApplyItem) ProtoMessage() {}
 
 func (x *BatchApplyItem) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[34]
+	mi := &file_eob_v1_service_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2323,7 +2570,7 @@ func (x *BatchApplyItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchApplyItem.ProtoReflect.Descriptor instead.
 func (*BatchApplyItem) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{34}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *BatchApplyItem) GetManifest() string {
@@ -2359,7 +2606,7 @@ type BatchApplyRequest struct {
 
 func (x *BatchApplyRequest) Reset() {
 	*x = BatchApplyRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[35]
+	mi := &file_eob_v1_service_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2371,7 +2618,7 @@ func (x *BatchApplyRequest) String() string {
 func (*BatchApplyRequest) ProtoMessage() {}
 
 func (x *BatchApplyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[35]
+	mi := &file_eob_v1_service_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2384,7 +2631,7 @@ func (x *BatchApplyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchApplyRequest.ProtoReflect.Descriptor instead.
 func (*BatchApplyRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{35}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *BatchApplyRequest) GetItems() []*BatchApplyItem {
@@ -2427,7 +2674,7 @@ type BatchApplyResult struct {
 
 func (x *BatchApplyResult) Reset() {
 	*x = BatchApplyResult{}
-	mi := &file_eob_v1_service_proto_msgTypes[36]
+	mi := &file_eob_v1_service_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2439,7 +2686,7 @@ func (x *BatchApplyResult) String() string {
 func (*BatchApplyResult) ProtoMessage() {}
 
 func (x *BatchApplyResult) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[36]
+	mi := &file_eob_v1_service_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2452,7 +2699,7 @@ func (x *BatchApplyResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchApplyResult.ProtoReflect.Descriptor instead.
 func (*BatchApplyResult) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{36}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *BatchApplyResult) GetKind() string {
@@ -2538,7 +2785,7 @@ type BatchApplyResponse struct {
 
 func (x *BatchApplyResponse) Reset() {
 	*x = BatchApplyResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[37]
+	mi := &file_eob_v1_service_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2550,7 +2797,7 @@ func (x *BatchApplyResponse) String() string {
 func (*BatchApplyResponse) ProtoMessage() {}
 
 func (x *BatchApplyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[37]
+	mi := &file_eob_v1_service_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2563,7 +2810,7 @@ func (x *BatchApplyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatchApplyResponse.ProtoReflect.Descriptor instead.
 func (*BatchApplyResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{37}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *BatchApplyResponse) GetCluster() *ClusterRef {
@@ -2610,7 +2857,7 @@ type WatchResourcesRequest struct {
 
 func (x *WatchResourcesRequest) Reset() {
 	*x = WatchResourcesRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[38]
+	mi := &file_eob_v1_service_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2622,7 +2869,7 @@ func (x *WatchResourcesRequest) String() string {
 func (*WatchResourcesRequest) ProtoMessage() {}
 
 func (x *WatchResourcesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[38]
+	mi := &file_eob_v1_service_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2635,7 +2882,7 @@ func (x *WatchResourcesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchResourcesRequest.ProtoReflect.Descriptor instead.
 func (*WatchResourcesRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{38}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *WatchResourcesRequest) GetKind() string {
@@ -2694,7 +2941,7 @@ type WatchResourcesResponse struct {
 
 func (x *WatchResourcesResponse) Reset() {
 	*x = WatchResourcesResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[39]
+	mi := &file_eob_v1_service_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2706,7 +2953,7 @@ func (x *WatchResourcesResponse) String() string {
 func (*WatchResourcesResponse) ProtoMessage() {}
 
 func (x *WatchResourcesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[39]
+	mi := &file_eob_v1_service_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2719,7 +2966,7 @@ func (x *WatchResourcesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchResourcesResponse.ProtoReflect.Descriptor instead.
 func (*WatchResourcesResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{39}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *WatchResourcesResponse) GetCluster() *ClusterRef {
@@ -2793,7 +3040,7 @@ type EventStreamRequest struct {
 
 func (x *EventStreamRequest) Reset() {
 	*x = EventStreamRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[40]
+	mi := &file_eob_v1_service_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2805,7 +3052,7 @@ func (x *EventStreamRequest) String() string {
 func (*EventStreamRequest) ProtoMessage() {}
 
 func (x *EventStreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[40]
+	mi := &file_eob_v1_service_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2818,7 +3065,7 @@ func (x *EventStreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventStreamRequest.ProtoReflect.Descriptor instead.
 func (*EventStreamRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{40}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *EventStreamRequest) GetNamespace() string {
@@ -2867,7 +3114,7 @@ type EventStreamResponse struct {
 
 func (x *EventStreamResponse) Reset() {
 	*x = EventStreamResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[41]
+	mi := &file_eob_v1_service_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2879,7 +3126,7 @@ func (x *EventStreamResponse) String() string {
 func (*EventStreamResponse) ProtoMessage() {}
 
 func (x *EventStreamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[41]
+	mi := &file_eob_v1_service_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2892,7 +3139,7 @@ func (x *EventStreamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventStreamResponse.ProtoReflect.Descriptor instead.
 func (*EventStreamResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{41}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *EventStreamResponse) GetCluster() *ClusterRef {
@@ -2984,7 +3231,7 @@ type TailStreamRequest struct {
 
 func (x *TailStreamRequest) Reset() {
 	*x = TailStreamRequest{}
-	mi := &file_eob_v1_service_proto_msgTypes[42]
+	mi := &file_eob_v1_service_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2996,7 +3243,7 @@ func (x *TailStreamRequest) String() string {
 func (*TailStreamRequest) ProtoMessage() {}
 
 func (x *TailStreamRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[42]
+	mi := &file_eob_v1_service_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3009,7 +3256,7 @@ func (x *TailStreamRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TailStreamRequest.ProtoReflect.Descriptor instead.
 func (*TailStreamRequest) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{42}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *TailStreamRequest) GetName() string {
@@ -3052,7 +3299,7 @@ type TailStreamResponse struct {
 
 func (x *TailStreamResponse) Reset() {
 	*x = TailStreamResponse{}
-	mi := &file_eob_v1_service_proto_msgTypes[43]
+	mi := &file_eob_v1_service_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3064,7 +3311,7 @@ func (x *TailStreamResponse) String() string {
 func (*TailStreamResponse) ProtoMessage() {}
 
 func (x *TailStreamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_eob_v1_service_proto_msgTypes[43]
+	mi := &file_eob_v1_service_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3077,7 +3324,7 @@ func (x *TailStreamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TailStreamResponse.ProtoReflect.Descriptor instead.
 func (*TailStreamResponse) Descriptor() ([]byte, []int) {
-	return file_eob_v1_service_proto_rawDescGZIP(), []int{43}
+	return file_eob_v1_service_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *TailStreamResponse) GetCluster() *ClusterRef {
@@ -3175,7 +3422,29 @@ const file_eob_v1_service_proto_rawDesc = "" +
 	"\x18ResolveEndpointsResponse\x12,\n" +
 	"\acluster\x18\x01 \x01(\v2\x12.eob.v1.ClusterRefR\acluster\x122\n" +
 	"\aresults\x18\x02 \x03(\v2\x18.eob.v1.ResolvedEndpointR\aresults\x12#\n" +
-	"\rcluster_state\x18\x03 \x01(\tR\fclusterState\"\x8b\x01\n" +
+	"\rcluster_state\x18\x03 \x01(\tR\fclusterState\"Z\n" +
+	"\x14EastWestGraphRequest\x12%\n" +
+	"\x0ewindow_seconds\x18\x01 \x01(\x05R\rwindowSeconds\x12\x1b\n" +
+	"\tmax_edges\x18\x02 \x01(\x05R\bmaxEdges\"\xc4\x02\n" +
+	"\fEastWestEdge\x12#\n" +
+	"\rsrc_namespace\x18\x01 \x01(\tR\fsrcNamespace\x12\x19\n" +
+	"\bsrc_name\x18\x02 \x01(\tR\asrcName\x12\x15\n" +
+	"\x06dst_ip\x18\x03 \x01(\tR\x05dstIp\x12\x19\n" +
+	"\bdst_port\x18\x04 \x01(\x05R\adstPort\x12\x19\n" +
+	"\bdst_kind\x18\x05 \x01(\tR\adstKind\x12\x19\n" +
+	"\bdst_name\x18\x06 \x01(\tR\adstName\x12#\n" +
+	"\rdst_namespace\x18\a \x01(\tR\fdstNamespace\x12!\n" +
+	"\fdst_workload\x18\b \x01(\tR\vdstWorkload\x12.\n" +
+	"\x13dst_service_account\x18\t \x01(\tR\x11dstServiceAccount\x12\x14\n" +
+	"\x05count\x18\n" +
+	" \x01(\x03R\x05count\"\xde\x01\n" +
+	"\x15EastWestGraphResponse\x12,\n" +
+	"\acluster\x18\x01 \x01(\v2\x12.eob.v1.ClusterRefR\acluster\x12*\n" +
+	"\x05edges\x18\x02 \x03(\v2\x14.eob.v1.EastWestEdgeR\x05edges\x12%\n" +
+	"\x0ewindow_seconds\x18\x03 \x01(\x05R\rwindowSeconds\x12\x1f\n" +
+	"\vevents_seen\x18\x04 \x01(\x03R\n" +
+	"eventsSeen\x12#\n" +
+	"\rcluster_state\x18\x05 \x01(\tR\fclusterState\"\x8b\x01\n" +
 	"\x13ResourceListRequest\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x1b\n" +
 	"\tapi_group\x18\x02 \x01(\tR\bapiGroup\x12\x1c\n" +
@@ -3358,14 +3627,15 @@ const file_eob_v1_service_proto_rawDesc = "" +
 	"\vstart_at_ts\x18\x04 \x01(\tR\tstartAtTs\"s\n" +
 	"\x12TailStreamResponse\x12,\n" +
 	"\acluster\x18\x01 \x01(\v2\x12.eob.v1.ClusterRefR\acluster\x12/\n" +
-	"\benvelope\x18\x02 \x01(\v2\x13.eob.v1.RawEnvelopeR\benvelope2\x81\n" +
+	"\benvelope\x18\x02 \x01(\v2\x13.eob.v1.RawEnvelopeR\benvelope2\xcf\n" +
 	"\n" +
 	"\n" +
 	"EoBService\x12R\n" +
 	"\x0fClusterIdentity\x12\x1e.eob.v1.ClusterIdentityRequest\x1a\x1f.eob.v1.ClusterIdentityResponse\x12@\n" +
 	"\tEoBHealth\x12\x18.eob.v1.EoBHealthRequest\x1a\x19.eob.v1.EoBHealthResponse\x12F\n" +
 	"\vTraceHealth\x12\x1a.eob.v1.TraceHealthRequest\x1a\x1b.eob.v1.TraceHealthResponse\x12U\n" +
-	"\x10ResolveEndpoints\x12\x1f.eob.v1.ResolveEndpointsRequest\x1a .eob.v1.ResolveEndpointsResponse\x12I\n" +
+	"\x10ResolveEndpoints\x12\x1f.eob.v1.ResolveEndpointsRequest\x1a .eob.v1.ResolveEndpointsResponse\x12L\n" +
+	"\rEastWestGraph\x12\x1c.eob.v1.EastWestGraphRequest\x1a\x1d.eob.v1.EastWestGraphResponse\x12I\n" +
 	"\fResourceList\x12\x1b.eob.v1.ResourceListRequest\x1a\x1c.eob.v1.ResourceListResponse\x12F\n" +
 	"\vResourceGet\x12\x1a.eob.v1.ResourceGetRequest\x1a\x1b.eob.v1.ResourceGetResponse\x12L\n" +
 	"\rResourceApply\x12\x1c.eob.v1.ResourceApplyRequest\x1a\x1d.eob.v1.ResourceApplyResponse\x12O\n" +
@@ -3396,7 +3666,7 @@ func file_eob_v1_service_proto_rawDescGZIP() []byte {
 	return file_eob_v1_service_proto_rawDescData
 }
 
-var file_eob_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
+var file_eob_v1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
 var file_eob_v1_service_proto_goTypes = []any{
 	(*ClusterRef)(nil),               // 0: eob.v1.ClusterRef
 	(*ClusterIdentityRequest)(nil),   // 1: eob.v1.ClusterIdentityRequest
@@ -3412,120 +3682,127 @@ var file_eob_v1_service_proto_goTypes = []any{
 	(*ResolveEndpointsRequest)(nil),  // 11: eob.v1.ResolveEndpointsRequest
 	(*ResolvedEndpoint)(nil),         // 12: eob.v1.ResolvedEndpoint
 	(*ResolveEndpointsResponse)(nil), // 13: eob.v1.ResolveEndpointsResponse
-	(*ResourceListRequest)(nil),      // 14: eob.v1.ResourceListRequest
-	(*ResourceListResponse)(nil),     // 15: eob.v1.ResourceListResponse
-	(*ResourceGetRequest)(nil),       // 16: eob.v1.ResourceGetRequest
-	(*ResourceGetResponse)(nil),      // 17: eob.v1.ResourceGetResponse
-	(*ResourceApplyRequest)(nil),     // 18: eob.v1.ResourceApplyRequest
-	(*ResourceApplyResponse)(nil),    // 19: eob.v1.ResourceApplyResponse
-	(*ResourceDeleteRequest)(nil),    // 20: eob.v1.ResourceDeleteRequest
-	(*ResourceDeleteResponse)(nil),   // 21: eob.v1.ResourceDeleteResponse
-	(*ResourceSchemaRequest)(nil),    // 22: eob.v1.ResourceSchemaRequest
-	(*ResourceSchemaResponse)(nil),   // 23: eob.v1.ResourceSchemaResponse
-	(*StreamInfo)(nil),               // 24: eob.v1.StreamInfo
-	(*StreamListRequest)(nil),        // 25: eob.v1.StreamListRequest
-	(*StreamListResponse)(nil),       // 26: eob.v1.StreamListResponse
-	(*StreamStatsRequest)(nil),       // 27: eob.v1.StreamStatsRequest
-	(*StreamStatsResponse)(nil),      // 28: eob.v1.StreamStatsResponse
-	(*StreamReadRequest)(nil),        // 29: eob.v1.StreamReadRequest
-	(*RawEnvelope)(nil),              // 30: eob.v1.RawEnvelope
-	(*StreamReadResponse)(nil),       // 31: eob.v1.StreamReadResponse
-	(*HeartbeatRequest)(nil),         // 32: eob.v1.HeartbeatRequest
-	(*HeartbeatResponse)(nil),        // 33: eob.v1.HeartbeatResponse
-	(*BatchApplyItem)(nil),           // 34: eob.v1.BatchApplyItem
-	(*BatchApplyRequest)(nil),        // 35: eob.v1.BatchApplyRequest
-	(*BatchApplyResult)(nil),         // 36: eob.v1.BatchApplyResult
-	(*BatchApplyResponse)(nil),       // 37: eob.v1.BatchApplyResponse
-	(*WatchResourcesRequest)(nil),    // 38: eob.v1.WatchResourcesRequest
-	(*WatchResourcesResponse)(nil),   // 39: eob.v1.WatchResourcesResponse
-	(*EventStreamRequest)(nil),       // 40: eob.v1.EventStreamRequest
-	(*EventStreamResponse)(nil),      // 41: eob.v1.EventStreamResponse
-	(*TailStreamRequest)(nil),        // 42: eob.v1.TailStreamRequest
-	(*TailStreamResponse)(nil),       // 43: eob.v1.TailStreamResponse
-	nil,                              // 44: eob.v1.EoBHealthResponse.ComponentsEntry
-	nil,                              // 45: eob.v1.EoBHealthResponse.AgentsPerNodeEntry
-	nil,                              // 46: eob.v1.TraceHealthResponse.ComponentsEntry
-	nil,                              // 47: eob.v1.TraceHealthResponse.AgentsPerNodeEntry
-	(*structpb.Struct)(nil),          // 48: google.protobuf.Struct
+	(*EastWestGraphRequest)(nil),     // 14: eob.v1.EastWestGraphRequest
+	(*EastWestEdge)(nil),             // 15: eob.v1.EastWestEdge
+	(*EastWestGraphResponse)(nil),    // 16: eob.v1.EastWestGraphResponse
+	(*ResourceListRequest)(nil),      // 17: eob.v1.ResourceListRequest
+	(*ResourceListResponse)(nil),     // 18: eob.v1.ResourceListResponse
+	(*ResourceGetRequest)(nil),       // 19: eob.v1.ResourceGetRequest
+	(*ResourceGetResponse)(nil),      // 20: eob.v1.ResourceGetResponse
+	(*ResourceApplyRequest)(nil),     // 21: eob.v1.ResourceApplyRequest
+	(*ResourceApplyResponse)(nil),    // 22: eob.v1.ResourceApplyResponse
+	(*ResourceDeleteRequest)(nil),    // 23: eob.v1.ResourceDeleteRequest
+	(*ResourceDeleteResponse)(nil),   // 24: eob.v1.ResourceDeleteResponse
+	(*ResourceSchemaRequest)(nil),    // 25: eob.v1.ResourceSchemaRequest
+	(*ResourceSchemaResponse)(nil),   // 26: eob.v1.ResourceSchemaResponse
+	(*StreamInfo)(nil),               // 27: eob.v1.StreamInfo
+	(*StreamListRequest)(nil),        // 28: eob.v1.StreamListRequest
+	(*StreamListResponse)(nil),       // 29: eob.v1.StreamListResponse
+	(*StreamStatsRequest)(nil),       // 30: eob.v1.StreamStatsRequest
+	(*StreamStatsResponse)(nil),      // 31: eob.v1.StreamStatsResponse
+	(*StreamReadRequest)(nil),        // 32: eob.v1.StreamReadRequest
+	(*RawEnvelope)(nil),              // 33: eob.v1.RawEnvelope
+	(*StreamReadResponse)(nil),       // 34: eob.v1.StreamReadResponse
+	(*HeartbeatRequest)(nil),         // 35: eob.v1.HeartbeatRequest
+	(*HeartbeatResponse)(nil),        // 36: eob.v1.HeartbeatResponse
+	(*BatchApplyItem)(nil),           // 37: eob.v1.BatchApplyItem
+	(*BatchApplyRequest)(nil),        // 38: eob.v1.BatchApplyRequest
+	(*BatchApplyResult)(nil),         // 39: eob.v1.BatchApplyResult
+	(*BatchApplyResponse)(nil),       // 40: eob.v1.BatchApplyResponse
+	(*WatchResourcesRequest)(nil),    // 41: eob.v1.WatchResourcesRequest
+	(*WatchResourcesResponse)(nil),   // 42: eob.v1.WatchResourcesResponse
+	(*EventStreamRequest)(nil),       // 43: eob.v1.EventStreamRequest
+	(*EventStreamResponse)(nil),      // 44: eob.v1.EventStreamResponse
+	(*TailStreamRequest)(nil),        // 45: eob.v1.TailStreamRequest
+	(*TailStreamResponse)(nil),       // 46: eob.v1.TailStreamResponse
+	nil,                              // 47: eob.v1.EoBHealthResponse.ComponentsEntry
+	nil,                              // 48: eob.v1.EoBHealthResponse.AgentsPerNodeEntry
+	nil,                              // 49: eob.v1.TraceHealthResponse.ComponentsEntry
+	nil,                              // 50: eob.v1.TraceHealthResponse.AgentsPerNodeEntry
+	(*structpb.Struct)(nil),          // 51: google.protobuf.Struct
 }
 var file_eob_v1_service_proto_depIdxs = []int32{
 	0,  // 0: eob.v1.ClusterIdentityResponse.cluster:type_name -> eob.v1.ClusterRef
 	0,  // 1: eob.v1.EoBHealthResponse.cluster:type_name -> eob.v1.ClusterRef
-	44, // 2: eob.v1.EoBHealthResponse.components:type_name -> eob.v1.EoBHealthResponse.ComponentsEntry
+	47, // 2: eob.v1.EoBHealthResponse.components:type_name -> eob.v1.EoBHealthResponse.ComponentsEntry
 	5,  // 3: eob.v1.EoBHealthResponse.directives:type_name -> eob.v1.DirectiveStatus
-	45, // 4: eob.v1.EoBHealthResponse.agents_per_node:type_name -> eob.v1.EoBHealthResponse.AgentsPerNodeEntry
+	48, // 4: eob.v1.EoBHealthResponse.agents_per_node:type_name -> eob.v1.EoBHealthResponse.AgentsPerNodeEntry
 	0,  // 5: eob.v1.TraceHealthResponse.cluster:type_name -> eob.v1.ClusterRef
-	46, // 6: eob.v1.TraceHealthResponse.components:type_name -> eob.v1.TraceHealthResponse.ComponentsEntry
-	47, // 7: eob.v1.TraceHealthResponse.agents_per_node:type_name -> eob.v1.TraceHealthResponse.AgentsPerNodeEntry
+	49, // 6: eob.v1.TraceHealthResponse.components:type_name -> eob.v1.TraceHealthResponse.ComponentsEntry
+	50, // 7: eob.v1.TraceHealthResponse.agents_per_node:type_name -> eob.v1.TraceHealthResponse.AgentsPerNodeEntry
 	10, // 8: eob.v1.ResolveEndpointsRequest.endpoints:type_name -> eob.v1.Endpoint
 	0,  // 9: eob.v1.ResolveEndpointsResponse.cluster:type_name -> eob.v1.ClusterRef
 	12, // 10: eob.v1.ResolveEndpointsResponse.results:type_name -> eob.v1.ResolvedEndpoint
-	0,  // 11: eob.v1.ResourceListResponse.cluster:type_name -> eob.v1.ClusterRef
-	48, // 12: eob.v1.ResourceListResponse.items:type_name -> google.protobuf.Struct
-	0,  // 13: eob.v1.ResourceGetResponse.cluster:type_name -> eob.v1.ClusterRef
-	48, // 14: eob.v1.ResourceGetResponse.object:type_name -> google.protobuf.Struct
-	0,  // 15: eob.v1.ResourceApplyResponse.cluster:type_name -> eob.v1.ClusterRef
-	0,  // 16: eob.v1.ResourceDeleteResponse.cluster:type_name -> eob.v1.ClusterRef
-	0,  // 17: eob.v1.ResourceSchemaResponse.cluster:type_name -> eob.v1.ClusterRef
-	48, // 18: eob.v1.ResourceSchemaResponse.openapi_v3_schema:type_name -> google.protobuf.Struct
-	0,  // 19: eob.v1.StreamListResponse.cluster:type_name -> eob.v1.ClusterRef
-	24, // 20: eob.v1.StreamListResponse.streams:type_name -> eob.v1.StreamInfo
-	0,  // 21: eob.v1.StreamStatsResponse.cluster:type_name -> eob.v1.ClusterRef
-	48, // 22: eob.v1.RawEnvelope.data:type_name -> google.protobuf.Struct
-	0,  // 23: eob.v1.StreamReadResponse.cluster:type_name -> eob.v1.ClusterRef
-	30, // 24: eob.v1.StreamReadResponse.messages:type_name -> eob.v1.RawEnvelope
-	0,  // 25: eob.v1.HeartbeatResponse.cluster:type_name -> eob.v1.ClusterRef
-	34, // 26: eob.v1.BatchApplyRequest.items:type_name -> eob.v1.BatchApplyItem
-	0,  // 27: eob.v1.BatchApplyResponse.cluster:type_name -> eob.v1.ClusterRef
-	36, // 28: eob.v1.BatchApplyResponse.items:type_name -> eob.v1.BatchApplyResult
-	0,  // 29: eob.v1.WatchResourcesResponse.cluster:type_name -> eob.v1.ClusterRef
-	48, // 30: eob.v1.WatchResourcesResponse.object:type_name -> google.protobuf.Struct
-	0,  // 31: eob.v1.EventStreamResponse.cluster:type_name -> eob.v1.ClusterRef
-	0,  // 32: eob.v1.TailStreamResponse.cluster:type_name -> eob.v1.ClusterRef
-	30, // 33: eob.v1.TailStreamResponse.envelope:type_name -> eob.v1.RawEnvelope
-	4,  // 34: eob.v1.EoBHealthResponse.ComponentsEntry.value:type_name -> eob.v1.ComponentStatus
-	6,  // 35: eob.v1.EoBHealthResponse.AgentsPerNodeEntry.value:type_name -> eob.v1.NodeAgentSummary
-	4,  // 36: eob.v1.TraceHealthResponse.ComponentsEntry.value:type_name -> eob.v1.ComponentStatus
-	6,  // 37: eob.v1.TraceHealthResponse.AgentsPerNodeEntry.value:type_name -> eob.v1.NodeAgentSummary
-	1,  // 38: eob.v1.EoBService.ClusterIdentity:input_type -> eob.v1.ClusterIdentityRequest
-	3,  // 39: eob.v1.EoBService.EoBHealth:input_type -> eob.v1.EoBHealthRequest
-	8,  // 40: eob.v1.EoBService.TraceHealth:input_type -> eob.v1.TraceHealthRequest
-	11, // 41: eob.v1.EoBService.ResolveEndpoints:input_type -> eob.v1.ResolveEndpointsRequest
-	14, // 42: eob.v1.EoBService.ResourceList:input_type -> eob.v1.ResourceListRequest
-	16, // 43: eob.v1.EoBService.ResourceGet:input_type -> eob.v1.ResourceGetRequest
-	18, // 44: eob.v1.EoBService.ResourceApply:input_type -> eob.v1.ResourceApplyRequest
-	20, // 45: eob.v1.EoBService.ResourceDelete:input_type -> eob.v1.ResourceDeleteRequest
-	22, // 46: eob.v1.EoBService.ResourceSchema:input_type -> eob.v1.ResourceSchemaRequest
-	25, // 47: eob.v1.EoBService.StreamList:input_type -> eob.v1.StreamListRequest
-	27, // 48: eob.v1.EoBService.StreamStats:input_type -> eob.v1.StreamStatsRequest
-	29, // 49: eob.v1.EoBService.StreamRead:input_type -> eob.v1.StreamReadRequest
-	32, // 50: eob.v1.EoBService.Heartbeat:input_type -> eob.v1.HeartbeatRequest
-	35, // 51: eob.v1.EoBService.BatchApply:input_type -> eob.v1.BatchApplyRequest
-	38, // 52: eob.v1.EoBService.WatchResources:input_type -> eob.v1.WatchResourcesRequest
-	40, // 53: eob.v1.EoBService.EventStream:input_type -> eob.v1.EventStreamRequest
-	42, // 54: eob.v1.EoBService.TailStream:input_type -> eob.v1.TailStreamRequest
-	2,  // 55: eob.v1.EoBService.ClusterIdentity:output_type -> eob.v1.ClusterIdentityResponse
-	7,  // 56: eob.v1.EoBService.EoBHealth:output_type -> eob.v1.EoBHealthResponse
-	9,  // 57: eob.v1.EoBService.TraceHealth:output_type -> eob.v1.TraceHealthResponse
-	13, // 58: eob.v1.EoBService.ResolveEndpoints:output_type -> eob.v1.ResolveEndpointsResponse
-	15, // 59: eob.v1.EoBService.ResourceList:output_type -> eob.v1.ResourceListResponse
-	17, // 60: eob.v1.EoBService.ResourceGet:output_type -> eob.v1.ResourceGetResponse
-	19, // 61: eob.v1.EoBService.ResourceApply:output_type -> eob.v1.ResourceApplyResponse
-	21, // 62: eob.v1.EoBService.ResourceDelete:output_type -> eob.v1.ResourceDeleteResponse
-	23, // 63: eob.v1.EoBService.ResourceSchema:output_type -> eob.v1.ResourceSchemaResponse
-	26, // 64: eob.v1.EoBService.StreamList:output_type -> eob.v1.StreamListResponse
-	28, // 65: eob.v1.EoBService.StreamStats:output_type -> eob.v1.StreamStatsResponse
-	31, // 66: eob.v1.EoBService.StreamRead:output_type -> eob.v1.StreamReadResponse
-	33, // 67: eob.v1.EoBService.Heartbeat:output_type -> eob.v1.HeartbeatResponse
-	37, // 68: eob.v1.EoBService.BatchApply:output_type -> eob.v1.BatchApplyResponse
-	39, // 69: eob.v1.EoBService.WatchResources:output_type -> eob.v1.WatchResourcesResponse
-	41, // 70: eob.v1.EoBService.EventStream:output_type -> eob.v1.EventStreamResponse
-	43, // 71: eob.v1.EoBService.TailStream:output_type -> eob.v1.TailStreamResponse
-	55, // [55:72] is the sub-list for method output_type
-	38, // [38:55] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	0,  // 11: eob.v1.EastWestGraphResponse.cluster:type_name -> eob.v1.ClusterRef
+	15, // 12: eob.v1.EastWestGraphResponse.edges:type_name -> eob.v1.EastWestEdge
+	0,  // 13: eob.v1.ResourceListResponse.cluster:type_name -> eob.v1.ClusterRef
+	51, // 14: eob.v1.ResourceListResponse.items:type_name -> google.protobuf.Struct
+	0,  // 15: eob.v1.ResourceGetResponse.cluster:type_name -> eob.v1.ClusterRef
+	51, // 16: eob.v1.ResourceGetResponse.object:type_name -> google.protobuf.Struct
+	0,  // 17: eob.v1.ResourceApplyResponse.cluster:type_name -> eob.v1.ClusterRef
+	0,  // 18: eob.v1.ResourceDeleteResponse.cluster:type_name -> eob.v1.ClusterRef
+	0,  // 19: eob.v1.ResourceSchemaResponse.cluster:type_name -> eob.v1.ClusterRef
+	51, // 20: eob.v1.ResourceSchemaResponse.openapi_v3_schema:type_name -> google.protobuf.Struct
+	0,  // 21: eob.v1.StreamListResponse.cluster:type_name -> eob.v1.ClusterRef
+	27, // 22: eob.v1.StreamListResponse.streams:type_name -> eob.v1.StreamInfo
+	0,  // 23: eob.v1.StreamStatsResponse.cluster:type_name -> eob.v1.ClusterRef
+	51, // 24: eob.v1.RawEnvelope.data:type_name -> google.protobuf.Struct
+	0,  // 25: eob.v1.StreamReadResponse.cluster:type_name -> eob.v1.ClusterRef
+	33, // 26: eob.v1.StreamReadResponse.messages:type_name -> eob.v1.RawEnvelope
+	0,  // 27: eob.v1.HeartbeatResponse.cluster:type_name -> eob.v1.ClusterRef
+	37, // 28: eob.v1.BatchApplyRequest.items:type_name -> eob.v1.BatchApplyItem
+	0,  // 29: eob.v1.BatchApplyResponse.cluster:type_name -> eob.v1.ClusterRef
+	39, // 30: eob.v1.BatchApplyResponse.items:type_name -> eob.v1.BatchApplyResult
+	0,  // 31: eob.v1.WatchResourcesResponse.cluster:type_name -> eob.v1.ClusterRef
+	51, // 32: eob.v1.WatchResourcesResponse.object:type_name -> google.protobuf.Struct
+	0,  // 33: eob.v1.EventStreamResponse.cluster:type_name -> eob.v1.ClusterRef
+	0,  // 34: eob.v1.TailStreamResponse.cluster:type_name -> eob.v1.ClusterRef
+	33, // 35: eob.v1.TailStreamResponse.envelope:type_name -> eob.v1.RawEnvelope
+	4,  // 36: eob.v1.EoBHealthResponse.ComponentsEntry.value:type_name -> eob.v1.ComponentStatus
+	6,  // 37: eob.v1.EoBHealthResponse.AgentsPerNodeEntry.value:type_name -> eob.v1.NodeAgentSummary
+	4,  // 38: eob.v1.TraceHealthResponse.ComponentsEntry.value:type_name -> eob.v1.ComponentStatus
+	6,  // 39: eob.v1.TraceHealthResponse.AgentsPerNodeEntry.value:type_name -> eob.v1.NodeAgentSummary
+	1,  // 40: eob.v1.EoBService.ClusterIdentity:input_type -> eob.v1.ClusterIdentityRequest
+	3,  // 41: eob.v1.EoBService.EoBHealth:input_type -> eob.v1.EoBHealthRequest
+	8,  // 42: eob.v1.EoBService.TraceHealth:input_type -> eob.v1.TraceHealthRequest
+	11, // 43: eob.v1.EoBService.ResolveEndpoints:input_type -> eob.v1.ResolveEndpointsRequest
+	14, // 44: eob.v1.EoBService.EastWestGraph:input_type -> eob.v1.EastWestGraphRequest
+	17, // 45: eob.v1.EoBService.ResourceList:input_type -> eob.v1.ResourceListRequest
+	19, // 46: eob.v1.EoBService.ResourceGet:input_type -> eob.v1.ResourceGetRequest
+	21, // 47: eob.v1.EoBService.ResourceApply:input_type -> eob.v1.ResourceApplyRequest
+	23, // 48: eob.v1.EoBService.ResourceDelete:input_type -> eob.v1.ResourceDeleteRequest
+	25, // 49: eob.v1.EoBService.ResourceSchema:input_type -> eob.v1.ResourceSchemaRequest
+	28, // 50: eob.v1.EoBService.StreamList:input_type -> eob.v1.StreamListRequest
+	30, // 51: eob.v1.EoBService.StreamStats:input_type -> eob.v1.StreamStatsRequest
+	32, // 52: eob.v1.EoBService.StreamRead:input_type -> eob.v1.StreamReadRequest
+	35, // 53: eob.v1.EoBService.Heartbeat:input_type -> eob.v1.HeartbeatRequest
+	38, // 54: eob.v1.EoBService.BatchApply:input_type -> eob.v1.BatchApplyRequest
+	41, // 55: eob.v1.EoBService.WatchResources:input_type -> eob.v1.WatchResourcesRequest
+	43, // 56: eob.v1.EoBService.EventStream:input_type -> eob.v1.EventStreamRequest
+	45, // 57: eob.v1.EoBService.TailStream:input_type -> eob.v1.TailStreamRequest
+	2,  // 58: eob.v1.EoBService.ClusterIdentity:output_type -> eob.v1.ClusterIdentityResponse
+	7,  // 59: eob.v1.EoBService.EoBHealth:output_type -> eob.v1.EoBHealthResponse
+	9,  // 60: eob.v1.EoBService.TraceHealth:output_type -> eob.v1.TraceHealthResponse
+	13, // 61: eob.v1.EoBService.ResolveEndpoints:output_type -> eob.v1.ResolveEndpointsResponse
+	16, // 62: eob.v1.EoBService.EastWestGraph:output_type -> eob.v1.EastWestGraphResponse
+	18, // 63: eob.v1.EoBService.ResourceList:output_type -> eob.v1.ResourceListResponse
+	20, // 64: eob.v1.EoBService.ResourceGet:output_type -> eob.v1.ResourceGetResponse
+	22, // 65: eob.v1.EoBService.ResourceApply:output_type -> eob.v1.ResourceApplyResponse
+	24, // 66: eob.v1.EoBService.ResourceDelete:output_type -> eob.v1.ResourceDeleteResponse
+	26, // 67: eob.v1.EoBService.ResourceSchema:output_type -> eob.v1.ResourceSchemaResponse
+	29, // 68: eob.v1.EoBService.StreamList:output_type -> eob.v1.StreamListResponse
+	31, // 69: eob.v1.EoBService.StreamStats:output_type -> eob.v1.StreamStatsResponse
+	34, // 70: eob.v1.EoBService.StreamRead:output_type -> eob.v1.StreamReadResponse
+	36, // 71: eob.v1.EoBService.Heartbeat:output_type -> eob.v1.HeartbeatResponse
+	40, // 72: eob.v1.EoBService.BatchApply:output_type -> eob.v1.BatchApplyResponse
+	42, // 73: eob.v1.EoBService.WatchResources:output_type -> eob.v1.WatchResourcesResponse
+	44, // 74: eob.v1.EoBService.EventStream:output_type -> eob.v1.EventStreamResponse
+	46, // 75: eob.v1.EoBService.TailStream:output_type -> eob.v1.TailStreamResponse
+	58, // [58:76] is the sub-list for method output_type
+	40, // [40:58] is the sub-list for method input_type
+	40, // [40:40] is the sub-list for extension type_name
+	40, // [40:40] is the sub-list for extension extendee
+	0,  // [0:40] is the sub-list for field type_name
 }
 
 func init() { file_eob_v1_service_proto_init() }
@@ -3539,7 +3816,7 @@ func file_eob_v1_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_eob_v1_service_proto_rawDesc), len(file_eob_v1_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   48,
+			NumMessages:   51,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
