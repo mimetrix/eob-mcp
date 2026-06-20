@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RACE — probe journey</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121821; --panel2:#0e141c; --line:#223040;
+    --txt:#cdd9e5; --dim:#7c8aa0; --grn:#39d98a; --red:#ff5c7a;
+    --amber:#ffb454; --blue:#5aa9ff; --hi:#1b2531;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  header{padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  h1{margin:0;font-size:15px;letter-spacing:.5px}
+  h1 .sub{color:var(--dim);font-weight:400}
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .hero{font-size:22px;font-weight:700;color:var(--grn)}
+  .headline{color:var(--dim)}
+  .chip{padding:1px 8px;border:1px solid var(--line);border-radius:10px;color:var(--dim)}
+  .chip.denial{color:var(--grn);border-color:var(--grn)}
+  .chip.idle{color:var(--amber);border-color:var(--amber)}
+  .chip.kill-sentinel{color:var(--red);border-color:var(--red)}
+  .banner{padding:6px 16px;border-bottom:1px solid var(--line);color:var(--dim);background:var(--panel)}
+  .banner b{color:var(--txt);font-weight:600}
+  main{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;padding:14px 16px}
+  @media(max-width:900px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
+  .card h2{margin:0 0 8px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:1px}
+  canvas{width:100%;height:180px;display:block}
+  .toggle{float:right;color:var(--dim);cursor:pointer;user-select:none;font-size:11px}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;font-size:11px}
+  .legend span{display:inline-flex;align-items:center;gap:4px;color:var(--dim)}
+  .sw{width:14px;height:0;border-top-width:2px;border-top-style:solid;display:inline-block}
+  .stations{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .st{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px;cursor:pointer;transition:.1s}
+  .st:hover{border-color:var(--blue)}
+  .st.sel{border-color:var(--blue);background:var(--hi)}
+  .st .id{color:var(--dim);font-size:10px}
+  .st .t{font-weight:600;margin:2px 0}
+  .st .live{color:var(--grn);font-size:11px;min-height:14px;word-break:break-word}
+  .st.warn .live{color:var(--amber)} .st.warn{border-color:var(--amber)}
+  .st.hit{border-color:var(--red);background:#1d1116} .st.hit .live{color:var(--red);font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:11px}
+  th,td{text-align:left;padding:3px 6px;border-bottom:1px solid var(--line)}
+  th{color:var(--dim);font-weight:500}
+  td.ext{color:var(--amber)}
+  .alarms{display:flex;gap:18px;margin-top:4px}
+  .alarms .n{font-size:20px;font-weight:700}
+  .alarms .decoy.on .n{color:var(--red)} .alarms .tarpit.on .n{color:var(--amber)}
+  .detail{font-size:12px} .detail .k{color:var(--dim)}
+  .detail .label{color:var(--blue);font-weight:600;margin-bottom:4px}
+  .gloss{color:var(--dim);font-size:11px} .gloss b{color:var(--txt)}
+  .stale{opacity:.45;filter:grayscale(.6)}
+  footer{padding:8px 16px;color:var(--dim);font-size:11px;border-top:1px solid var(--line)}
+</style>
+</head>
+<body>
+<header>
+  <h1>RACE <span class="sub">— inbound probe journey · perimeter denial</span></h1>
+  <div class="row" style="margin-top:6px">
+    <span class="hero" id="hero">—</span>
+    <span class="chip" id="mode">mode —</span>
+    <span class="headline" id="headline"></span>
+  </div>
+</header>
+<div class="banner" id="siteBanner">…</div>
+
+<main>
+  <div>
+    <div class="card">
+      <h2>denial rate per channel
+        <span class="toggle" id="normToggle">[normalize: off]</span></h2>
+      <canvas id="chart"></canvas>
+      <div class="legend" id="legend"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>journey — click a station</h2>
+      <div class="stations" id="stations"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h2>station detail</h2>
+      <div class="detail" id="detail"><span class="k">select a station above.</span></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>confirmed signal</h2>
+      <div class="alarms">
+        <div class="tarpit" id="aTarpit"><div class="n">0</div><div class="k">tarpitted</div></div>
+        <div class="decoy" id="aDecoy"><div class="n">0</div><div class="k">decoy hits</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>top probers</h2>
+      <table><thead><tr><th>prober</th><th>resolved</th><th>denied</th><th>last</th></tr></thead>
+        <tbody id="probers"><tr><td colspan="4" class="k">—</td></tr></tbody></table>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>glossary</h2>
+      <div class="gloss" id="gloss"></div>
+    </div>
+  </div>
+</main>
+<footer id="foot">read-only · polling /journey.json · stimulus is out-of-band (run nmap externally)</footer>
+
+<script>
+const POLL_MS=1000;
+// Static station map — domain config. Live values arrive in journey.json.stations[id].
+const STATIONS=[
+ {id:"01",t:"Ingress",icon:"⟶",loc:"TC/XDP @ vhost0",what:"Egress responses to inbound probes are intercepted at the node's external interface.",map:"tc egress hook"},
+ {id:"02",t:"Prober classify",icon:"⊙",loc:"per-prober session",what:"Each remote prober is keyed for attribution; recon is tracked per source.",map:"session_states"},
+ {id:"03",t:"OS-fingerprint denial",icon:"◇",loc:"OSFP_EGRESS (ch3)",what:"TTL and TCP window are substituted with bounded random values — denies p0f/nmap -O.",map:"osfp_targets · substitute ttl/win"},
+ {id:"04",t:"Sequence-gen denial",icon:"◇",loc:"SEQ_IPID (ch8)",what:"ISN / IP-ID / TS-clock signatures randomized — denies sequence-prediction fingerprinting.",map:"seq rewrite"},
+ {id:"05",t:"ICMP fingerprint denial",icon:"◇",loc:"ICMP_EGRESS (ch7)",what:"ICMP echo/error fields rewritten — denies ICMP-based OS inference.",map:"icmp rewrite"},
+ {id:"06",t:"Banner denial (L7)",icon:"◇",loc:"BANNER_EGRESS (ch1/2)",what:"Cleartext service banners (SSH/HTTP/…) substituted — denies -sV version detection.",map:"banner_targets · ASCII substitute"},
+ {id:"07",t:"Tarpit",icon:"▦",loc:"DECISION_TARPIT",what:"A prober exceeding the rate threshold (10 / 60s) gets its SYN-ACK dropped.",map:"per-prober rate limit"},
+ {id:"08",t:"Decoy tripwire",icon:"☠",loc:"DECOY (ch9) → DecoyHit",what:"Inbound touch of a decoy port — confirmed-malicious by construction.",map:"decoy_ports"},
+ {id:"09",t:"Audit → aggregate",icon:"≋",loc:"defense.events.*",what:"Every denial emits an AuditEvent; the aggregator derives threat signals.",map:"probes → threats"},
+];
+// palette + dash per channel name
+const PAL=["#5aa9ff","#39d98a","#ffb454","#ff5c7a","#c89bff","#4dd0e1","#f48fb1","#9ccc65","#ffd54f"];
+const DASH=[[],[6,4],[2,3],[8,3,2,3],[4,4],[1,4]];
+const chColor={}, chDash={}; let palI=0;
+function styleFor(ch){ if(!(ch in chColor)){chColor[ch]=PAL[palI%PAL.length];chDash[ch]=DASH[palI%DASH.length];palI++;} return [chColor[ch],chDash[ch]]; }
+
+let normalize=false, selected="01", last=null;
+document.getElementById("normToggle").onclick=()=>{normalize=!normalize;
+  document.getElementById("normToggle").textContent="[normalize: "+(normalize?"on":"off")+"]"; if(last)draw(last.channel_series||{});};
+
+function renderStations(stat){
+  const host=document.getElementById("stations"); host.innerHTML="";
+  for(const s of STATIONS){
+    const live=(stat&&stat[s.id])||{}; const cls=live.status==="hit"?"hit":live.status==="warn"?"warn":"";
+    const el=document.createElement("div");
+    el.className="st "+cls+(s.id===selected?" sel":"");
+    el.innerHTML=`<div class="id">${s.icon} ${s.id} · ${s.loc}</div><div class="t">${s.t}</div><div class="live">${live.live||""}</div>`;
+    el.onclick=()=>{selected=s.id;renderDetail();renderStations(stat);};
+    host.appendChild(el);
+  }
+}
+function renderDetail(){
+  const s=STATIONS.find(x=>x.id===selected); const live=(last&&last.stations&&last.stations[selected])||{};
+  document.getElementById("detail").innerHTML=
+    `<div class="label">${s.icon} ${s.t}</div>
+     <div><span class="k">where:</span> ${s.loc}</div>
+     <div><span class="k">map:</span> ${s.map}</div>
+     <div style="margin:6px 0">${s.what}</div>
+     <div><span class="k">live:</span> ${live.live||"—"}</div>`;
+}
+function draw(series){
+  const cv=document.getElementById("chart"), dpr=devicePixelRatio||1;
+  const W=cv.clientWidth,H=cv.clientHeight; cv.width=W*dpr; cv.height=H*dpr;
+  const g=cv.getContext("2d"); g.scale(dpr,dpr); g.clearRect(0,0,W,H);
+  const keys=Object.keys(series).sort(); const N=120;
+  // y-scale: p95 across all values (robust to warmup spikes)
+  let vals=[]; keys.forEach(k=>series[k].forEach(v=>vals.push(v)));
+  vals.sort((a,b)=>a-b); let ymax=vals.length?vals[Math.floor(vals.length*0.95)]:1; ymax=Math.max(ymax,1);
+  g.strokeStyle="#223040"; g.lineWidth=1; g.beginPath(); g.moveTo(0,H-.5); g.lineTo(W,H-.5); g.stroke();
+  const leg=document.getElementById("legend"); leg.innerHTML="";
+  for(const k of keys){
+    const [col,dash]=styleFor(k); const data=series[k]; const n=data.length;
+    let lmax=Math.max(1,...data);
+    g.strokeStyle=col; g.lineWidth=1.6; g.setLineDash(dash); g.beginPath();
+    for(let i=0;i<n;i++){
+      const x=W*(i/(N-1));
+      const denom=normalize?lmax:ymax;
+      const y=H-(data[i]/denom)*(H-6)-3;
+      i?g.lineTo(x,y):g.moveTo(x,y);
+    }
+    g.stroke(); g.setLineDash([]);
+    const sp=document.createElement("span");
+    sp.innerHTML=`<i class="sw" style="border-top-color:${col}"></i>${k} (${data[n-1]||0})`;
+    leg.appendChild(sp);
+  }
+  if(!keys.length){g.fillStyle="#7c8aa0";g.fillText("no active channels — awaiting probe stimulus",10,H/2);}
+}
+function renderProbers(ps){
+  const tb=document.getElementById("probers");
+  if(!ps||!ps.length){tb.innerHTML='<tr><td colspan="4" class="k">none active</td></tr>';return;}
+  tb.innerHTML=ps.map(p=>{const ext=p.name==="external";
+    return `<tr><td>${p.ip}</td><td class="${ext?'ext':''}">${p.name}</td><td>${p.denied}</td><td>${p.last_decision||""}</td></tr>`;}).join("");
+}
+function renderGloss(){
+  document.getElementById("gloss").innerHTML=
+   `<b>RACE</b> eBPF perimeter denial — rewrites fingerprintable egress bytes. ·
+    <b>channel</b> one denied fingerprint surface (OSFP, SEQ_IPID, ICMP, banner…). ·
+    <b>Substituted</b> field rewritten · <b>Tarpit</b> SYN-ACK dropped · <b>DecoyHit</b> decoy-port touch = confirmed malicious. ·
+    <b>prober</b> remote source · <b>responder</b> observed service. ·
+    Denial is per-field & independent (no phantom OS); confirmed-malicious lives in the decoy layer.`;
+}
+async function poll(){
+  try{
+    const r=await fetch("/journey.json",{cache:"no-store"}); const d=await r.json(); last=d;
+    document.body.classList.remove("stale");
+    document.getElementById("hero").textContent=d.hero||"—";
+    document.getElementById("headline").textContent=d.headline||"";
+    const m=document.getElementById("mode"); m.textContent="mode "+(d.mode||"—"); m.className="chip "+(d.mode||"");
+    const s=d.site||{};
+    document.getElementById("siteBanner").innerHTML=
+      `site <b>${s.site_id||"?"}</b> · tenant <b>${s.tenant||"—"}</b> · region <b>${s.region||"—"}</b> &nbsp;|&nbsp; iface <b>${s.iface||"?"}</b> · ${d.n_active||0}/${d.n_channels||0} channels lit · ${d.n_probers||0} probers`;
+    draw(d.channel_series||{});
+    renderStations(d.stations||{}); renderDetail();
+    renderProbers(d.probers||[]);
+    const al=d.alarms||{};
+    const t=document.getElementById("aTarpit"), de=document.getElementById("aDecoy");
+    t.querySelector(".n").textContent=al.tarpit||0; t.className="tarpit"+(al.tarpit>0?" on":"");
+    de.querySelector(".n").textContent=al.decoy_hits||0; de.className="decoy"+(al.decoy_hits>0?" on":"");
+  }catch(e){ document.body.classList.add("stale"); }
+}
+renderGloss(); renderStations({}); renderDetail();
+poll(); setInterval(poll,POLL_MS);
+</script>
+</body>
+</html>

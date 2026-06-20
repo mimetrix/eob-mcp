@@ -129,7 +129,23 @@ func run(httpListen, grpcListen string, tlsCfg tlsOpts, logger *slog.Logger) err
 		return err
 	}
 
-	httpSrv := buildHTTPServer(httpListen, mcpServer, tlsConf, logger)
+	// Journey dashboard (read-only): the human face of the defense bus.
+	// Best-effort — a missing/unreachable defense NATS just omits the
+	// /journey routes; the rest of the server is unaffected.
+	var journey *service.Journey
+	if cfg.DefenseNATSURL != "" {
+		journey = service.NewJourney(svc)
+		if jerr := journey.Start(); jerr != nil {
+			logger.Warn("journey dashboard disabled", "err", jerr)
+			journey = nil
+		} else {
+			defer journey.Close()
+		}
+	} else {
+		logger.Info("EOB_DEFENSE_NATS_URL unset; journey dashboard disabled")
+	}
+
+	httpSrv := buildHTTPServer(httpListen, mcpServer, journey, tlsConf, logger)
 	grpcSrv := buildGRPCServer(svc, tlsConf)
 
 	// Both listeners write to the same error channel; whichever fails
@@ -309,12 +325,17 @@ func buildMCPServer(svc *service.Server, haveDyn, haveStreams bool) (*mcp.Server
 	return s, nil
 }
 
-func buildHTTPServer(addr string, mcpServer *mcp.Server, tlsConf *tls.Config, logger *slog.Logger) *http.Server {
+func buildHTTPServer(addr string, mcpServer *mcp.Server, journey *service.Journey, tlsConf *tls.Config, logger *slog.Logger) *http.Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", healthzHandler)
 	mux.HandleFunc("/readyz", readyzHandler)
 	mux.HandleFunc("/version", versionHandler)
 	mux.Handle("/mcp", mcpServer)
+	if journey != nil {
+		mux.HandleFunc("/journey", journey.ServeHTML)
+		mux.HandleFunc("/journey.json", journey.ServeJSON)
+		logger.Info("journey dashboard routes registered", "paths", []string{"/journey", "/journey.json"})
+	}
 	return &http.Server{
 		Addr:              addr,
 		Handler:           withRequestLimits(mux),
