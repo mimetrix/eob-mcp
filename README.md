@@ -19,11 +19,15 @@ rationale.
 
 ## What it is
 
-The Mantis EoB stack on a Kubernetes cluster (today: F5 XC Customer Edge
-sites — see [`eob-xc-install`](https://github.com/mimetrix/XC-eBPF) for
-that installer) gives you a CRD-driven capture/observation platform. The
-existing UI is a per-cluster dashboard; the existing CLI is `kubectl` +
-the JetStream API.
+The Mantis EoB stack runs on **any Kubernetes cluster** and gives you a
+CRD-driven capture/observation platform. The existing UI is a per-cluster
+dashboard; the existing CLI is `kubectl` + the JetStream API.
+
+`eob-mcp` is an **ancillary service that sits next to wherever EoB is
+installed** — it assumes nothing about the underlying environment beyond a
+reachable apiserver and the Tawon streamstore Service. F5 XC Customer Edge
+is one such environment (see [`eob-xc-install`](https://github.com/mimetrix/XC-eBPF)
+for that installer), but it is an example, not a dependency.
 
 `eob-mcp` adds a third surface: a typed, federation-aware API to the
 EoB primitives, consumable by any MCP or gRPC client (Claude Code, an
@@ -216,9 +220,12 @@ Identity env vars (surface in `cluster_identity` output):
 
 ```
 EOB_SITE_ID, EOB_TENANT, EOB_REGION
-  auto-detected from /etc/resolv.conf on F5 XC CE sites
-  (`<site>.<tenant>.tenant.local` + `<region>.compute.internal`).
-  Set explicitly to override discovery or run off-XC.
+  set explicitly to identify the site in cluster_identity output —
+  this is the normal path on any cluster.
+  Convenience: on F5 XC CE sites these auto-detect from
+  /etc/resolv.conf (`<site>.<tenant>.tenant.local` +
+  `<region>.compute.internal`); set them explicitly everywhere else
+  (or to override the XC discovery).
 
 EOB_OPERATOR_NAMESPACE       (default: operators)
 EOB_TAWON_NAMESPACE          (default: tawon-operator)
